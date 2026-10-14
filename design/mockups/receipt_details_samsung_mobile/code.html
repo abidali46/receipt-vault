@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Receipt Details - Samsung Mobile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#002113",
+                        "tertiary-fixed": "#6ffbbe",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-container": "#007d55",
+                        "outline": "#737686",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#434655",
+                        "surface-container-highest": "#e1e3e4",
+                        "primary-container": "#2563eb",
+                        "tertiary": "#006242",
+                        "secondary": "#505f76",
+                        "on-tertiary-container": "#bdffdb",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#54647a",
+                        "surface-variant": "#e1e3e4",
+                        "secondary-container": "#d0e1fb",
+                        "inverse-surface": "#2e3132",
+                        "secondary-fixed": "#d3e4fe",
+                        "primary": "#004ac6",
+                        "on-primary-container": "#eeefff",
+                        "surface": "#f8f9fa",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-bright": "#f8f9fa",
+                        "on-surface": "#191c1d",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#d9dadb",
+                        "surface-container-low": "#f3f4f5",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-container": "#edeeef",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-primary-fixed": "#00174b",
+                        "inverse-primary": "#b4c5ff",
+                        "outline-variant": "#c3c6d7",
+                        "error": "#ba1a1a",
+                        "on-background": "#191c1d",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "background": "#f8f9fa",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed": "#0b1c30",
+                        "surface-tint": "#0053db",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1200px",
+                        "base": "4px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-sm min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim shadow-sm fixed top-0 w-full z-40">
+<div class="flex items-center justify-between px-md h-16 w-full max-w-container-max mx-auto">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-headline-md font-headline-md text-primary dark:text-primary-fixed-dim">Receipt Details</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pt-24 px-md md:px-lg max-w-2xl mx-auto flex flex-col gap-xl">
+<!-- Header Section -->
+<section class="text-center md:text-left flex flex-col gap-sm">
+<h2 class="font-display-lg-mobile text-display-lg-mobile md:font-display-lg md:text-display-lg text-on-surface">Samsung Mobile</h2>
+<div class="flex items-center justify-center md:justify-start gap-sm">
+<span class="bg-tertiary-container/20 text-tertiary-container font-label-caps text-label-caps px-3 py-1 rounded-full border border-tertiary-container/30">120 days left</span>
+</div>
+</section>
+<!-- Receipt Image Preview Placeholder -->
+<section class="w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden shadow-sm border border-surface-variant relative group bg-surface-container flex items-center justify-center">
+<img class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-80 mix-blend-multiply" data-alt="A clean, minimalist flat-lay photograph of a crisp, white retail receipt from Best Buy resting on a subtle, light-grey marble surface. The lighting is bright and even, casting very soft shadows to emphasize a modern, professional, and organized aesthetic typical of high-end digital archiving. The focus is sharp on the top portion of the receipt where 'Samsung Mobile' and the $899.00 price tag would logically be, though text is abstract. A slight cool-blue tint permeates the ambient light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgetbekP5lrcviDP41gY55MZFHtb8FRGRDcjR0Z8aT7EOo4nUR192R3h0qrB-BLnnFE0MtE0gc-suQZAGNXCKMJ_45D1RoGdmHAcvQWrBfhmcrhfMao9B6U3GPBZVfKfF0NGzA2zzP_1jlfIh3O_vl4NPLQh1a0PKKxx1rdk2-o6V8_mGSGyCdtkLsgkKQ5VduIf-_2uW0-mi8Oq8QE0pUf39IJBQBXJ_NLO1OQCyvRl3BY6qKFuARld9n7ozzjHos18XqHDCSPRer"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-highest/80 to-transparent flex items-end p-md">
+<button class="bg-surface text-on-surface font-label-caps text-label-caps px-4 py-2 rounded-full shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+                    View Full Receipt
+                </button>
+</div>
+</section>
+<!-- Details Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.05)] border border-surface-variant p-lg flex flex-col gap-lg hover:shadow-[0px_4px_8px_rgba(0,0,0,0.08)] hover:border-outline-variant transition-all duration-300">
+<div class="flex justify-between items-baseline border-b border-surface-variant pb-md">
+<div class="flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-secondary">Store</span>
+<span class="font-body-lg text-body-lg text-on-surface">Best Buy</span>
+</div>
+<div class="flex flex-col gap-xs text-right">
+<span class="font-label-caps text-label-caps text-secondary">Price</span>
+<span class="font-headline-md text-headline-md text-primary">$899.00</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-md md:gap-lg">
+<div class="flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                        Purchase Date
+                    </span>
+<span class="font-body-lg text-body-lg text-on-surface">October 15, 2023</span>
+</div>
+<div class="flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+                        Warranty Duration
+                    </span>
+<span class="font-body-lg text-body-lg text-on-surface">1 Year</span>
+</div>
+<div class="flex flex-col gap-xs col-span-2 md:col-span-1">
+<span class="font-label-caps text-label-caps text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event_busy</span>
+                        Expiry Date
+                    </span>
+<span class="font-body-lg text-body-lg text-on-surface">October 15, 2024</span>
+</div>
+</div>
+<!-- Progress Bar for Warranty -->
+<div class="flex flex-col gap-sm pt-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-secondary">Warranty Progress</span>
+<span class="font-label-caps text-label-caps text-tertiary-container">Active</span>
+</div>
+<div class="h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-container rounded-full" style="width: 66%;"></div>
+</div>
+</div>
+</section>
+<!-- Actions -->
+<section class="flex flex-col md:flex-row gap-md pt-md">
+<button class="flex-1 bg-surface-container-lowest border border-outline text-secondary font-label-caps text-label-caps py-3 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                Edit Details
+            </button>
+<button class="flex-1 bg-error-container text-on-error-container font-label-caps text-label-caps py-3 rounded-full hover:bg-error hover:text-on-error transition-colors flex items-center justify-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                Delete Receipt
+            </button>
+</section>
+</main>
+<!-- BottomNavBar (Hidden on MD up as per rules, though this is a detail page so it might be suppressed entirely based on semantic logic, but rules say to render if it's a top-level destination. A detail page usually isn't, but instructions provided the BottomNavBar JSON. I will suppress it based on "Linear/Transactional or Task-Focused: Any sub-page featuring a 'Close' or 'Back' action that implies a temporary departure from the main navigation flow." - The TopAppBar has a back button, so Nav shell is suppressed.) -->
+</body></html>

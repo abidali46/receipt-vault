@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#f8f9fa",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "outline": "#737686",
+                      "surface-container-highest": "#e1e3e4",
+                      "primary": "#004ac6",
+                      "surface-dim": "#d9dadb",
+                      "secondary-fixed": "#d3e4fe",
+                      "secondary-container": "#d0e1fb",
+                      "on-secondary-fixed": "#0b1c30",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "on-primary-container": "#eeefff",
+                      "on-surface-variant": "#434655",
+                      "secondary": "#505f76",
+                      "on-background": "#191c1d",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "surface-tint": "#0053db",
+                      "on-primary-fixed": "#00174b",
+                      "on-tertiary-container": "#bdffdb",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "tertiary-fixed": "#6ffbbe",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-on-surface": "#f0f1f2",
+                      "inverse-primary": "#b4c5ff",
+                      "inverse-surface": "#2e3132",
+                      "outline-variant": "#c3c6d7",
+                      "on-surface": "#191c1d",
+                      "tertiary": "#006242",
+                      "tertiary-container": "#007d55",
+                      "surface": "#f8f9fa",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#f3f4f5",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "background": "#f8f9fa",
+                      "on-error-container": "#93000a",
+                      "error": "#ba1a1a",
+                      "surface-container-high": "#e7e8e9",
+                      "surface-variant": "#e1e3e4",
+                      "on-secondary-container": "#54647a",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#002113",
+                      "surface-container": "#edeeef",
+                      "primary-fixed": "#dbe1ff",
+                      "on-secondary": "#ffffff",
+                      "primary-container": "#2563eb",
+                      "on-secondary-fixed-variant": "#38485d"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "lg": "24px",
+                      "gutter": "16px",
+                      "md": "16px",
+                      "base": "4px",
+                      "sm": "8px",
+                      "xl": "32px",
+                      "container-max": "1200px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "display-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .toggle-checkbox:checked {
+            @apply bg-primary border-primary;
+            right: 0;
+            border-color: #004ac6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            @apply bg-primary;
+            background-color: #004ac6;
+        }
+        .toggle-checkbox:checked + .toggle-label:before {
+            transform: translateX(100%);
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body-lg text-on-surface h-full flex flex-col md:flex-row antialiased">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full bg-surface dark:bg-inverse-surface shadow-sm z-50 md:hidden flex items-center px-gutter h-16">
+<button aria-label="Go back" class="p-2 -ml-2 text-primary dark:text-primary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:opacity-70 rounded-full">
+<span aria-hidden="true" class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile font-bold text-on-surface dark:text-inverse-on-surface ml-4">Settings</h1>
+</header>
+<!-- Side Navigation (Web) -->
+<nav class="hidden md:flex flex-col w-64 bg-surface dark:bg-inverse-surface h-full border-r border-outline-variant dark:border-outline p-4 z-40 shrink-0">
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim mb-8 px-4">Brand Logo</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center px-4 py-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:opacity-70" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mr-3" data-icon="home">home</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:opacity-70" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mr-3" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-caps text-label-caps">Receipts</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:opacity-70" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mr-3" data-icon="verified">verified</span>
+<span class="font-label-caps text-label-caps">Warranties</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-full bg-secondary-container dark:bg-on-secondary-container text-on-secondary-container dark:text-secondary-fixed font-medium active:opacity-70 transition-colors" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mr-3" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 w-full mx-auto max-w-container-max pt-20 pb-24 md:pt-8 md:pb-8 px-4 md:px-lg flex flex-col items-center">
+<div class="w-full max-w-2xl">
+<!-- Profile Section -->
+<section class="flex flex-col items-center justify-center mb-xl">
+<div class="relative w-24 h-24 mb-4">
+<img class="w-24 h-24 rounded-full object-cover shadow-sm border border-outline-variant" data-alt="A minimal, professional studio portrait of a man, flat background, high key lighting, clean crisp aesthetic, looking forward, modern minimalist styling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKndyMaM9U-1jrT3fslMdCBQ-QQogOw74x8WP6oQ-Wy0c-DC25J-4qMVp-n2JK56mENIvSWSBw7P1B1dNw-kvEgTP-l60Tm0DD-vw6CR5RLnJGCIZfVH98ROUr4huaFuCnXtJ5vycFV0EYHhap8VMtcMO8Q81jBq_StObbeABA82gnG0RE-ZB--Hnb_mdDjqRnEtGQ0l4I6wlXVO52YKmyIZkk3VxTtlGaAXs21EoueQvRLPxyEFihYyWBjF31nmotRKZdO2nBoIlt"/>
+<button aria-label="Edit Profile Picture" class="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-1.5 shadow-md hover:bg-on-primary-fixed-variant transition-colors">
+<span aria-hidden="true" class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</button>
+</div>
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface">Alex Johnson</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">alex.johnson@example.com</p>
+<button class="mt-4 px-6 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-caps text-label-caps rounded-full transition-colors active:scale-95 shadow-sm border border-outline-variant">
+                    Edit Profile
+                </button>
+</section>
+<!-- Settings List -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden mb-8">
+<ul class="divide-y divide-outline-variant">
+<!-- App Preferences -->
+<li class="px-6 py-4 flex items-center justify-between hover:bg-surface-bright transition-colors">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center mr-4">
+<span aria-hidden="true" class="material-symbols-outlined text-primary" data-icon="dark_mode">dark_mode</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-surface font-medium">Dark Mode</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Adjust app appearance</p>
+</div>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-outline-variant appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10 top-0 left-0" id="dark-mode-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200 ease-in-out" for="dark-mode-toggle"></label>
+</div>
+</li>
+<li class="px-6 py-4 flex items-center justify-between hover:bg-surface-bright transition-colors">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center mr-4">
+<span aria-hidden="true" class="material-symbols-outlined text-primary" data-icon="notifications">notifications</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-surface font-medium">Notifications</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Manage warranty alerts</p>
+</div>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-primary appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10 top-0 left-0" id="notifications-toggle" name="toggle" style="transform: translateX(100%);" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-primary cursor-pointer transition-colors duration-200 ease-in-out" for="notifications-toggle"></label>
+</div>
+</li>
+<!-- Data Management -->
+<li class="px-6 py-4 flex items-center justify-between hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center mr-4 group-hover:bg-primary-container/20 transition-colors">
+<span aria-hidden="true" class="material-symbols-outlined text-primary" data-icon="cloud_sync">cloud_sync</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-surface font-medium">Backup Data</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Sync with cloud</p>
+</div>
+</div>
+<span aria-hidden="true" class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</li>
+<li class="px-6 py-4 flex items-center justify-between hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center mr-4 group-hover:bg-primary-container/20 transition-colors">
+<span aria-hidden="true" class="material-symbols-outlined text-primary" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-surface font-medium">Export Receipts as PDF</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Download all records</p>
+</div>
+</div>
+<span aria-hidden="true" class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</li>
+</ul>
+</section>
+<!-- Secondary Actions -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<ul class="divide-y divide-outline-variant">
+<li class="px-6 py-4 flex items-center justify-between hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center mr-4 group-hover:bg-surface-container-highest transition-colors">
+<span aria-hidden="true" class="material-symbols-outlined text-on-surface-variant" data-icon="info">info</span>
+</div>
+<h3 class="font-body-lg text-body-lg text-on-surface font-medium">About App</h3>
+</div>
+<span class="font-body-sm text-body-sm text-outline-variant group-hover:text-on-surface-variant transition-colors">v1.2.4</span>
+</li>
+<li class="px-6 py-4 flex items-center justify-between hover:bg-error-container/20 transition-colors cursor-pointer group">
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full bg-error-container/50 flex items-center justify-center mr-4 group-hover:bg-error-container transition-colors">
+<span aria-hidden="true" class="material-symbols-outlined text-error" data-icon="delete_forever">delete_forever</span>
+</div>
+<h3 class="font-body-lg text-body-lg text-error font-medium">Clear All Data</h3>
+</div>
+</li>
+</ul>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe px-4 bg-surface dark:bg-inverse-surface rounded-t-xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-outline-variant/30">
+<a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-container opacity-60 hover:opacity-100 transition-opacity active:scale-95 transition-transform duration-150 p-2" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-container opacity-60 hover:opacity-100 transition-opacity active:scale-95 transition-transform duration-150 p-2" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mb-1" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-caps text-label-caps">Receipts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-container opacity-60 hover:opacity-100 transition-opacity active:scale-95 transition-transform duration-150 p-2" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mb-1" data-icon="verified">verified</span>
+<span class="font-label-caps text-label-caps">Warranties</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-container text-on-secondary-container dark:text-secondary-fixed rounded-full px-5 py-2 active:scale-95 transition-transform duration-150 shadow-sm" href="#">
+<span aria-hidden="true" class="material-symbols-outlined mb-1" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</a>
+</nav>
+<script>
+        // Simple toggle logic for the custom checkboxes
+        document.getElementById('dark-mode-toggle').addEventListener('change', function() {
+            if(this.checked) {
+                this.style.transform = 'translateX(100%)';
+            } else {
+                this.style.transform = 'translateX(0)';
+            }
+        });
+
+        document.getElementById('notifications-toggle').addEventListener('change', function() {
+            if(this.checked) {
+                this.style.transform = 'translateX(100%)';
+            } else {
+                this.style.transform = 'translateX(0)';
+            }
+        });
+    </script>
+</body></html>

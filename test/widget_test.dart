@@ -1,30 +1,28 @@
-// This is a basic Flutter widget test.
+// test/widget_test.dart
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic smoke test – verifies that the app starts and renders the
+// bottom navigation bar with all five destinations.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:receipt_vault/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App renders bottom navigation bar', (WidgetTester tester) async {
+    await tester.pumpWidget(const ReceiptVaultApp());
+    // Allow GoRouter to settle.
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // The NavigationBar should be present.
+    expect(find.byType(NavigationBar), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // All five tab labels should be visible in the NavigationBar.
+    // findsWidgets is used because the active tab may also show the label
+    // in the AppBar title, producing more than one match for that tab.
+    expect(find.text('Receipts'), findsWidgets);
+    expect(find.text('Warranties'), findsOneWidget);
+    expect(find.text('Add'), findsOneWidget);
+    expect(find.text('Alerts'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
   });
 }

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Receipt - Vault</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#737686",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-primary-fixed": "#00174b",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f3f4f5",
+                        "tertiary-container": "#007d55",
+                        "primary-container": "#2563eb",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-secondary-container": "#54647a",
+                        "on-primary-container": "#eeefff",
+                        "on-surface": "#191c1d",
+                        "on-secondary-fixed": "#0b1c30",
+                        "primary": "#004ac6",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#006242",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-high": "#e7e8e9",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-tint": "#0053db",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-fixed": "#002113",
+                        "on-surface-variant": "#434655",
+                        "error": "#ba1a1a",
+                        "surface-container": "#edeeef",
+                        "on-background": "#191c1d",
+                        "surface-bright": "#f8f9fa",
+                        "surface-dim": "#d9dadb",
+                        "background": "#f8f9fa",
+                        "secondary-fixed": "#d3e4fe",
+                        "secondary-container": "#d0e1fb",
+                        "secondary": "#505f76",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#c3c6d7",
+                        "inverse-surface": "#2e3132",
+                        "on-tertiary-container": "#bdffdb",
+                        "surface": "#f8f9fa",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#6ffbbe",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-variant": "#e1e3e4",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "container-max": "1200px",
+                        "xl": "32px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        [data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full sticky top-0 z-50 bg-surface shadow-sm">
+<div class="flex items-center justify-between px-gutter py-sm w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary font-headline-md text-headline-md" data-icon="security" data-weight="fill">security</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">Vault</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A close-up, high-key, minimalist portrait of a professional looking at the camera. The background is a stark, clean white to match the light-mode UI. The lighting is soft and flattering, creating a polished, trustworthy vibe appropriate for a secure document management app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuACCao_ueekZRVEiRZk56CkObI359-gSUvI-6w-fKqMC5B-BP-OG3D1fM_UxY-JbpVKK7L5d2PztsFwvIvcwMBu4gSr0LzkRsrCWOF9N3UD0Zpk7aYVcWhFgODpMhh0hBQbLWNmcLlo6Rey0MDqXFF8JpWwcVrtIaW35EdbBs4mOoglfxIrVMW-4iP9Uof64I50DizzYTPUdLw5MDpmsQc9W2wtQlnq9wl1f8c9gXxFH1-9S-nh_Rb1s5Gli9XrEGjayexmw-y76tqm"/>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-gutter py-lg md:py-xl">
+<div class="max-w-xl mx-auto">
+<!-- Add Photo Section -->
+<section class="mb-lg">
+<button class="w-full h-40 md:h-48 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-lowest flex flex-col items-center justify-center gap-sm hover:border-primary hover:bg-secondary-fixed transition-colors focus:outline-none focus:ring-4 focus:ring-primary-fixed-dim focus:border-transparent group">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-primary-fixed group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-secondary" data-icon="add_a_photo">add_a_photo</span>
+</div>
+<span class="font-headline-md text-headline-md text-on-surface">Add Photo</span>
+<span class="font-body-sm text-body-sm text-secondary">Tap to scan or upload a receipt</span>
+</button>
+</section>
+<!-- Form Details -->
+<section class="bg-surface-container-lowest rounded-xl p-md md:p-lg border border-outline-variant shadow-sm space-y-md">
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="product_name">Product Name</label>
+<input class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all" id="product_name" placeholder="e.g. MacBook Pro M3" type="text"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="store_name">Store Name</label>
+<input class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all" id="store_name" placeholder="e.g. Apple Store" type="text"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="price">Price</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
+<span class="font-body-lg text-body-lg text-secondary">$</span>
+</div>
+<input class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest pl-10 pr-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all" id="price" placeholder="0.00" step="0.01" type="number"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="purchase_date">Purchase Date</label>
+<input class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all" id="purchase_date" type="date"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="warranty">Warranty Duration</label>
+<div class="relative">
+<select class="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all" id="warranty">
+<option disabled="" selected="" value="">Select duration</option>
+<option value="6m">6 months</option>
+<option value="12m">12 months</option>
+<option value="24m">24 months</option>
+<option value="custom">Custom</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center pr-md pointer-events-none">
+<span class="material-symbols-outlined text-secondary" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant" for="notes">Notes</label>
+<textarea class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-sm font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-primary-fixed-dim focus:ring-4 outline-none transition-all resize-none" id="notes" placeholder="Add any extra details..." rows="3"></textarea>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Action Area -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-outline-variant p-md md:p-lg z-40 pb-safe md:hidden">
+<button class="w-full bg-primary text-on-primary font-headline-md text-headline-md py-sm px-lg rounded-full hover:bg-primary-fixed hover:text-on-primary-fixed active:scale-95 transition-all shadow-sm">
+            Save Receipt
+        </button>
+</div>
+<!-- Desktop Save Action Area (Hidden on mobile) -->
+<div class="hidden md:flex justify-center max-w-container-max mx-auto px-gutter mb-xl mt-md">
+<button class="w-full max-w-xl bg-primary text-on-primary font-headline-md text-headline-md py-sm px-lg rounded-full hover:bg-surface-tint active:scale-95 transition-all shadow-sm">
+            Save Receipt
+        </button>
+</div>
+</body></html>

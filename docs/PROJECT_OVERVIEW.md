@@ -1,4 +1,4 @@
-﻿# Receipt Vault – Project Overview
+# Receipt Vault – Project Overview
 
 ## What Is This App?
 
@@ -34,8 +34,8 @@ The design philosophy is described in `design/DESIGN.md` as **"Digital Peace of 
 | 1 | Bottom navigation shell (5 tabs) | ✅ Implemented |
 | 2 | App theme (Material 3, light/dark) | ✅ Implemented |
 | 3 | go_router navigation with StatefulShellRoute | ✅ Implemented |
-| 4 | Receipts screen (real UI) | ⬜ Not started |
-| 5 | Receipt data model (Drift) | ⬜ Not started |
+| 4 | Receipts screen (real UI & reusable widgets) | ✅ Implemented (DB wiring pending Phase 1/2) |
+| 5 | Receipt data model (Drift + SQLite) | ✅ Implemented |
 | 6 | Receipt creation / capture flow | ⬜ Not started |
 | 7 | Receipt detail screen | ⬜ Not started |
 | 8 | Warranty tracker screen | ⬜ Not started |
@@ -43,6 +43,35 @@ The design philosophy is described in `design/DESIGN.md` as **"Digital Peace of 
 | 10 | Settings screen | ⬜ Not started |
 | 11 | Local push notifications | ⬜ Not started |
 | 12 | OCR receipt scanning | ⬜ Not started |
+
+## Implemented Receipts Screen Architecture
+
+The **Receipts screen** (`lib/features/receipts/presentation/receipts_screen.dart`) is built to strictly match `design/mockups/my_receipts_home_updated_nav/` and `design/DESIGN.md`. It is composed of decoupled, reusable presentation components:
+
+1. **Screen Header (`ReceiptsScreen`)**:
+   - `AppBar` with `receipt_long_outlined` icon in `AppColors.primary` (`#004AC6` in light mode, `#B4C5FF` in dark mode) and bold title "My Receipts".
+   - Overflow options action button (`Icons.more_vert`).
+2. **Search Input (`ReceiptSearchBar`)**:
+   - `lib/features/receipts/presentation/widgets/receipt_search_bar.dart`
+   - 8px corner radius (`AppShapes.radiusSm`), search icon, clear button suffix on text input, and `primaryContainer` blue focused border.
+3. **Category Filters (`CategoryFilterRow`)**:
+   - `lib/features/receipts/presentation/widgets/category_filter_row.dart`
+   - Horizontally scrollable pill-shaped chips: `"All"`, `"Electronics"`, `"Food"`, `"Others"`.
+   - Selected chip: `colorScheme.primaryContainer` (`#2563EB`) fill with white text.
+   - Inactive chips: Surface fill with subtle border (`borderLight`/`borderDark`) and secondary text.
+4. **Receipt Item Card (`ReceiptCard`)**:
+   - `lib/features/receipts/presentation/widgets/receipt_card.dart`
+   - 8px corner radius, 1px subtle border, soft ambient shadow (`0px 2px 4px rgba(0,0,0,0.05)`).
+   - Left: 48×48 circular icon container + product name + store name.
+   - Right: Right-aligned price (`$899`) + pill status badge with colored indicator dot (active green, expiring red, or expired gray).
+   - Expired items display strikethrough text, muted colors, and `0.75` opacity.
+5. **Empty State (`ReceiptsEmptyState`)**:
+   - `lib/features/receipts/presentation/widgets/receipts_empty_state.dart`
+   - Pristine state: Shows `receipt_long_outlined` icon with "No receipts yet. Tap + to add your first receipt."
+   - Filtered state: Shows `search_off_outlined` icon with "No matching receipts" and a "Reset filters" button.
+6. **Data & Enums**:
+   - `lib/features/receipts/domain/entities/receipt_card_data.dart` — Pure presentation entity.
+   - `lib/shared/enums/warranty_status.dart` — Shared `WarrantyStatus` enum (`active`, `expiringSoon`, `expired`, `none`).
 
 ## Design References
 

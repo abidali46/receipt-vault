@@ -21,13 +21,10 @@ Do not skip ahead — the database task unlocks all real feature work.
 
 **Priority: FIRST — everything else depends on this.**
 
-### Task 1A: Resolve the primary colour conflict (D-008)
-
-Before building any real UI:
-1. Open `design/mockups/my_receipts_home_updated_nav/screen.png` and compare visually.
-2. Decide whether primary is `#004AC6` or `#2563EB`.
-3. Update `AppColors.primary` and the `ColorScheme` in `app_theme.dart` if needed.
-4. Run `flutter analyze` to confirm no regressions.
+- [x] **Task 1A: Resolve the primary colour conflict (D-008)**
+  - Inspected `design/mockups/my_receipts_home_updated_nav/screen.png` and `code.html`.
+  - Mapped `#004AC6` to `primary` (brand titles/icons in light mode, `#B4C5FF` in dark mode) and `#2563EB` to `primaryContainer` (active chips, Add button, focus rings).
+  - Updated `AppColors`, `AppTheme.light`, and `AppTheme.dark` in `app_theme.dart`, and documented in `DECISIONS.md`.
 
 ### Task 1B: Add Inter font
 
@@ -35,31 +32,17 @@ Before building any real UI:
 2. Update `AppTheme._buildTextTheme` to use `GoogleFonts.interTextTheme(...)`.
 3. Run `flutter pub get` and `flutter analyze`.
 
-### Task 1C: Define the Receipt data model
-
-1. Create `lib/core/storage/app_database.dart`:
-   - `@DriftDatabase` class `AppDatabase`
-   - `ReceiptsTable` with columns:
-     - `id` — `IntColumn`, auto-increment, primary key
-     - `productName` — `TextColumn`
-     - `storeName` — `TextColumn`, nullable
-     - `category` — `TextColumn`, nullable (Electronics, Food, etc.)
-     - `purchaseDate` — `DateTimeColumn`
-     - `totalAmount` — `RealColumn` (decimal as double)
-     - `warrantyDurationDays` — `IntColumn`, nullable (0 or null = no warranty)
-     - `notes` — `TextColumn`, nullable
-     - `imagePath` — `TextColumn`, nullable (local file path)
-     - `createdAt` — `DateTimeColumn`, auto-set on insert
-2. Run `build_runner`:
-   ```
-   flutter pub run build_runner build --delete-conflicting-outputs
-   ```
-3. Create `lib/core/storage/database_provider.dart` — Riverpod provider for `AppDatabase`.
-4. Wrap `runApp` with `ProviderScope` in `main.dart`.
+- [x] **Task 1C: Define the Receipt data model & Drift SQLite database foundation**
+  - Created `lib/core/storage/app_database.dart` with Drift `@DriftDatabase` and `Receipts` table.
+  - Configured persistent background isolate SQLite storage (`receipt_vault.sqlite` via `NativeDatabase.createInBackground`).
+  - Created `lib/core/storage/database_provider.dart` with Riverpod `databaseProvider`.
+  - Wrapped app with `ProviderScope` in `lib/main.dart` and `test/widget_test.dart`.
+  - Ran `build_runner` and generated `lib/core/storage/app_database.g.dart`.
+  - Added CRUD, filter, and stream unit tests using in-memory database (`test/core/storage/app_database_test.dart` and `database_provider_test.dart`).
 
 ---
 
-## 🔲 Phase 2 — Receipts Screen (UI Complete, DB Wiring Pending)
+## ✅ Phase 2 — Receipts Screen & Database Integration (Complete)
 
 **Reference:** `design/mockups/my_receipts_home_updated_nav/screen.png` and `code.html`
 
@@ -79,8 +62,14 @@ Before building any real UI:
   - Pristine empty state when no receipts are present
   - Filtered empty state with "Reset filters" action button
   - Presentation entity `ReceiptCardData` and `WarrantyStatus` enum
-- [ ] **Task 2A: ReceiptsRepository & Database integration**
-  - Wire repository provider → `AsyncValue<List<Receipt>>` to populate `ReceiptCardData` from Drift once Phase 1 is done
+- [x] **Task 2A: ReceiptsRepository & Database integration**
+  - Created `ReceiptsRepository` interface and `DriftReceiptsRepository` implementation using Drift `AppDatabase`.
+  - Created `WarrantyCalculator` service for centralized warranty calculations and category icon mapping.
+  - Implemented `ReceiptCardData.fromReceipt` mapping database rows to presentation models.
+  - Added Riverpod `receiptsRepositoryProvider` and `receiptsStreamProvider`.
+  - Connected `ReceiptsScreen` to `receiptsStreamProvider` via `ConsumerStatefulWidget` with loading (`CircularProgressIndicator`), error (`_buildErrorState`), and empty states.
+  - Verified real-time reactivity, search/category filtering, and dark mode.
+  - Added 19 new repository and widget tests (total 34 tests passing).
 
 ---
 

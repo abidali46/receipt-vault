@@ -1,7 +1,10 @@
 // lib/features/receipts/presentation/receipts_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:receipt_vault/app/theme/app_theme.dart';
 import 'package:receipt_vault/features/receipts/domain/entities/receipt_card_data.dart';
+import 'package:receipt_vault/features/receipts/presentation/providers/receipts_providers.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/category_filter_row.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/receipt_card.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/receipt_search_bar.dart';
@@ -11,25 +14,22 @@ import 'package:receipt_vault/features/receipts/presentation/widgets/receipts_em
 /// and receipt card listing or empty state.
 ///
 /// Follows DESIGN.md specifications and the updated 5-tab mockup.
-class ReceiptsScreen extends StatefulWidget {
-  const ReceiptsScreen({
-    super.key,
-    this.receipts = const [],
-    this.onReceiptTap,
-  });
+/// Connects reactively to [receiptsStreamProvider] by default.
+class ReceiptsScreen extends ConsumerStatefulWidget {
+  const ReceiptsScreen({super.key, this.receipts, this.onReceiptTap});
 
-  /// Receipts list to display. Defaults to an empty list until the local
-  /// database and repository are integrated in Phase 1 / Phase 2.
-  final List<ReceiptCardData> receipts;
+  /// Optional receipts list. If provided, this list is used directly instead
+  /// of watching [receiptsStreamProvider] (useful for tests with static data).
+  final List<ReceiptCardData>? receipts;
 
   /// Optional callback invoked when a receipt card is tapped.
   final ValueChanged<ReceiptCardData>? onReceiptTap;
 
   @override
-  State<ReceiptsScreen> createState() => _ReceiptsScreenState();
+  ConsumerState<ReceiptsScreen> createState() => _ReceiptsScreenState();
 }
 
-class _ReceiptsScreenState extends State<ReceiptsScreen> {
+class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
   String _searchQuery = '';
@@ -70,8 +70,8 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
   bool get _isFiltered =>
       _searchQuery.isNotEmpty || _selectedCategory.toLowerCase() != 'all';
 
-  List<ReceiptCardData> get _filteredReceipts {
-    return widget.receipts.where((receipt) {
+  List<ReceiptCardData> _filterReceipts(List<ReceiptCardData> receipts) {
+    return receipts.where((receipt) {
       // Category filter
       if (_selectedCategory.toLowerCase() != 'all') {
         if (receipt.category.toLowerCase() != _selectedCategory.toLowerCase()) {
@@ -98,11 +98,91 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
     }).toList();
   }
 
+  Widget _buildListOrEmpty(List<ReceiptCardData> filtered) {
+    if (filtered.isEmpty) {
+      return ReceiptsEmptyState(
+        isFiltered: _isFiltered,
+        onClearFilters: _resetFilters,
+      );
+    }
+
+    return ListView.separated(
+      itemCount: filtered.length,
+      padding: const EdgeInsets.only(bottom: 24),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final receipt = filtered[index];
+        return ReceiptCard(
+          receipt: receipt,
+          onTap: () => widget.onReceiptTap?.call(receipt),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, Object error) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Failed to load receipts',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: secondaryTextColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final filtered = _filteredReceipts;
+
+    Widget bodyContent;
+    if (widget.receipts != null) {
+      final filtered = _filterReceipts(widget.receipts!);
+      bodyContent = _buildListOrEmpty(filtered);
+    } else {
+      final receiptsAsync = ref.watch(receiptsStreamProvider);
+      bodyContent = receiptsAsync.when(
+        data: (receipts) {
+          final filtered = _filterReceipts(receipts);
+          return _buildListOrEmpty(filtered);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _buildErrorState(context, error),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -159,27 +239,8 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Receipt List or Empty State
-                  Expanded(
-                    child: filtered.isEmpty
-                        ? ReceiptsEmptyState(
-                            isFiltered: _isFiltered,
-                            onClearFilters: _resetFilters,
-                          )
-                        : ListView.separated(
-                            itemCount: filtered.length,
-                            padding: const EdgeInsets.only(bottom: 24),
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final receipt = filtered[index];
-                              return ReceiptCard(
-                                receipt: receipt,
-                                onTap: () => widget.onReceiptTap?.call(receipt),
-                              );
-                            },
-                          ),
-                  ),
+                  // Receipt List, Empty State, Loading, or Error
+                  Expanded(child: bodyContent),
                 ],
               ),
             ),

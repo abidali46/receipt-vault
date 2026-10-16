@@ -35,11 +35,11 @@ class CategoryFilterRow extends StatelessWidget {
               category.toLowerCase() == selectedCategory.toLowerCase();
 
           final backgroundColor = isSelected
-              ? AppColors.primary
+              ? theme.colorScheme.primaryContainer
               : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
 
           final textColor = isSelected
-              ? Colors.white
+              ? theme.colorScheme.onPrimary
               : (isDark
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight);

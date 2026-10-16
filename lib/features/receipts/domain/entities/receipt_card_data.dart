@@ -1,6 +1,8 @@
 // lib/features/receipts/domain/entities/receipt_card_data.dart
 
 import 'package:flutter/material.dart';
+import 'package:receipt_vault/core/storage/app_database.dart';
+import 'package:receipt_vault/features/receipts/domain/services/warranty_calculator.dart';
 import 'package:receipt_vault/shared/enums/warranty_status.dart';
 
 /// Presentation entity representing a single receipt in list views.
@@ -15,6 +17,30 @@ class ReceiptCardData {
     this.category = 'Others',
     this.icon = Icons.receipt_long_outlined,
   });
+
+  /// Maps a database [Receipt] entity to a [ReceiptCardData] presentation model.
+  factory ReceiptCardData.fromReceipt(Receipt receipt, {DateTime? now}) {
+    final warranty = WarrantyCalculator.calculate(
+      purchaseDate: receipt.purchaseDate,
+      warrantyDurationDays: receipt.warrantyDurationDays,
+      now: now,
+    );
+
+    final category = receipt.category?.trim().isNotEmpty == true
+        ? receipt.category!.trim()
+        : 'Others';
+
+    return ReceiptCardData(
+      id: receipt.id.toString(),
+      productName: receipt.productName,
+      storeName: receipt.storeName,
+      price: receipt.totalAmount,
+      status: warranty.status,
+      statusLabel: warranty.statusLabel,
+      category: category,
+      icon: WarrantyCalculator.iconForCategory(category),
+    );
+  }
 
   /// Unique identifier for the receipt.
   final String id;

@@ -77,9 +77,12 @@ class ReceiptSearchBar extends StatelessWidget {
           borderRadius: AppShapes.radiusSm,
           borderSide: BorderSide(color: borderColor, width: 1),
         ),
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: AppShapes.radiusSm,
-          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(
+            color: theme.colorScheme.primaryContainer,
+            width: 1.5,
+          ),
         ),
       ),
     );

@@ -3,13 +3,25 @@
 // Basic smoke test – verifies that the app starts and renders the
 // bottom navigation bar with all five destinations.
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:receipt_vault/core/storage/app_database.dart';
+import 'package:receipt_vault/core/storage/database_provider.dart';
 import 'package:receipt_vault/main.dart';
 
 void main() {
   testWidgets('App renders bottom navigation bar', (WidgetTester tester) async {
-    await tester.pumpWidget(const ReceiptVaultApp());
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(() => db.close());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: const ReceiptVaultApp(),
+      ),
+    );
     // Allow GoRouter to settle.
     await tester.pumpAndSettle();
 
@@ -24,5 +36,9 @@ void main() {
     expect(find.text('Add'), findsOneWidget);
     expect(find.text('Alerts'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
+
+    // Clean up in-memory db and clear any pending Drift timers
+    await db.close();
+    await tester.pump(const Duration(milliseconds: 50));
   });
 }

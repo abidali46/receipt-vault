@@ -74,7 +74,7 @@ class AppShell extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary,
+                  color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(dest.icon, color: colorScheme.onPrimary, size: 26),
@@ -83,7 +83,7 @@ class AppShell extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary,
+                  color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(

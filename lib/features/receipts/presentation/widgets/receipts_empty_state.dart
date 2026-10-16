@@ -31,7 +31,7 @@ class ReceiptsEmptyState extends StatelessWidget {
         ? Icons.search_off_outlined
         : Icons.receipt_long_outlined;
 
-    final iconBg = AppColors.primary.withAlpha(isDark ? 35 : 20);
+    final iconBg = theme.colorScheme.primary.withAlpha(isDark ? 35 : 20);
     final secondaryTextColor = isDark
         ? AppColors.textSecondaryDark
         : AppColors.textSecondaryLight;
@@ -53,7 +53,7 @@ class ReceiptsEmptyState extends StatelessWidget {
                 color: iconBg,
                 borderRadius: AppShapes.radiusLg,
               ),
-              child: Icon(icon, size: 36, color: AppColors.primary),
+              child: Icon(icon, size: 36, color: theme.colorScheme.primary),
             ),
             const SizedBox(height: 20),
             Text(

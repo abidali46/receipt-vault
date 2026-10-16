@@ -13,9 +13,10 @@ import 'package:flutter/material.dart';
 /// Immutable palette used by both ThemeData instances and plain widgets.
 abstract final class AppColors {
   // Brand
-  static const Color primary = Color(0xFF2563EB);
+  static const Color primary = Color(0xFF004AC6);
+  static const Color primaryContainer = Color(0xFF2563EB);
   static const Color primaryLight = Color(0xFF3B82F6);
-  static const Color primaryDark = Color(0xFF1D4ED8);
+  static const Color primaryDark = Color(0xFF003EA8);
 
   // Semantic
   static const Color success = Color(0xFF22C55E);
@@ -162,12 +163,12 @@ abstract final class AppTheme {
       brightness: Brightness.light,
       primary: AppColors.primary,
       onPrimary: Colors.white,
-      primaryContainer: Color(0xFFDBEAFE),
-      onPrimaryContainer: AppColors.primaryDark,
+      primaryContainer: AppColors.primaryContainer,
+      onPrimaryContainer: Colors.white,
       secondary: AppColors.primaryLight,
       onSecondary: Colors.white,
-      secondaryContainer: Color(0xFFEFF6FF),
-      onSecondaryContainer: AppColors.primaryDark,
+      secondaryContainer: Color(0xFFD0E1FB),
+      onSecondaryContainer: Color(0xFF54647A),
       tertiary: AppColors.success,
       onTertiary: Colors.white,
       tertiaryContainer: Color(0xFFDCFCE7),
@@ -204,11 +205,11 @@ abstract final class AppTheme {
   static ThemeData get dark {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: AppColors.primaryLight,
-      onPrimary: Colors.white,
-      primaryContainer: AppColors.primaryDark,
-      onPrimaryContainer: Color(0xFFDBEAFE),
-      secondary: AppColors.primary,
+      primary: Color(0xFFB4C5FF),
+      onPrimary: Color(0xFF002A78),
+      primaryContainer: AppColors.primaryContainer,
+      onPrimaryContainer: Colors.white,
+      secondary: AppColors.primaryLight,
       onSecondary: Colors.white,
       secondaryContainer: Color(0xFF1E3A5F),
       onSecondaryContainer: Color(0xFFDBEAFE),
@@ -272,7 +273,7 @@ abstract final class AppTheme {
       // Bottom navigation bar
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surface,
-        indicatorColor: colorScheme.primary.withAlpha(26),
+        indicatorColor: colorScheme.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return textTheme.labelSmall?.copyWith(

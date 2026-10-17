@@ -6,7 +6,7 @@
 
 1. **Capture and store purchase receipts** — by photographing a paper receipt, importing an image from the gallery, or entering details manually.
 2. **Track product warranties** — by linking warranty durations to receipts and computing expiry dates automatically.
-3. **Receive warranty alerts** — proactive notifications before warranties expire.
+3. **Review warranty alerts** — calculated in-app reminders and urgency-sorted alerts for expiring warranties.
 4. **Browse and search receipts** — with category filtering, search, and status badges.
 
 The design philosophy is described in `design/DESIGN.md` as **"Digital Peace of Mind"** — a minimalist-modern aesthetic targeting busy professionals who need a reliable, clutter-free way to manage high-value purchases.
@@ -39,7 +39,7 @@ The design philosophy is described in `design/DESIGN.md` as **"Digital Peace of 
 | 6 | Receipt creation / capture flow & local image storage | ✅ Implemented |
 | 7 | Receipt detail screen & editing/deletion | ✅ Implemented |
 | 8 | Warranty tracker screen (state-aware & reactive) | ✅ Implemented |
-| 9 | Alerts / notifications screen | ✅ Implemented |
+| 9 | In-app warranty alerts screen | ✅ Implemented |
 | 10 | Settings screen (theme persistence, privacy guarantee & CSV export) | ✅ Implemented |
 | 11 | Local push notifications | ⬜ Not started |
 | 12 | OCR receipt scanning | ⬜ Not started |
@@ -97,7 +97,7 @@ design/
     ├── receipt_details_samsung_mobile/← Receipt detail / warranty progress screen
     ├── active_warranties/             ← Warranties tab screen
     ├── add_receipt/                   ← Add receipt form screen
-    ├── alerts/                        ← Alerts / notifications screen
+    ├── alerts/                        ← In-app warranty alerts screen
     └── settings/                      ← Settings screen
 ```
 

@@ -456,18 +456,41 @@ A comprehensive repository-wide quality audit was executed covering architecture
 - **Data Protection & Version Control Hardening**: `.gitignore` was updated with explicit rules for local SQLite databases (`*.sqlite`, `*.sqlite-*`), settings files (`app_settings.json`), cached images (`receipt_images/`), and exported files (`*.csv`) to prevent accidental commits of local device state.
 - **Placeholder Code Audit**: `PlaceholderScreen` in `lib/shared/widgets/placeholder_screen.dart` is currently unmounted since all 5 navigation branches and sub-routes are fully implemented; it is preserved as an unmounted utility widget for future phase placeholders.
 
+### 16. Post-Implementation QA & Targeted Fixes
+
+Targeted fixes, documentation accuracy improvements, and currency review:
+- **Missing-Receipt Edit Flow Hardening (`AddReceiptScreen`)**:
+  - Implemented loading state (`_buildLoadingState`) with `CircularProgressIndicator` while fetching receipt by ID.
+  - Implemented "Receipt Not Found" state (`_buildNotFoundState`) with receipt icon, descriptive message, and "Back to Receipts" button when ID does not exist in the database.
+  - Implemented error state (`_buildErrorState`) with error icon, exception message, "Retry" button, and "Back to Receipts" button when repository retrieval throws.
+  - Guaranteed blank editable form and save button are never displayed for missing or failing records.
+  - Added safety guard in `_handleSubmit` preventing update attempts before record is loaded.
+  - Form dirty checking returns false when receipt record is not loaded, preventing unwanted discard dialogs on back navigation.
+  - Added 4 regression tests in `test/features/home/add_receipt_screen_test.dart` (now 149 passing tests in suite).
+- **README.md Replacement**:
+  - Replaced the default Flutter starter README with comprehensive project documentation reflecting actual code.
+- **Currency Handling Review**:
+  - Confirmed SQLite schema stores amounts as pure numeric `REAL` values (`totalAmount`) and CSV export formats pure decimals (`toStringAsFixed(2)`), keeping persistence currency-agnostic.
+  - Identified 3 places with hardcoded dollar symbols (`AddReceiptScreen` price input prefix, `ReceiptCardData.formattedPrice`, and `ReceiptDetailScreen` details card).
+  - Documented recommendation: document USD (`$`) as default for initial release, with user-selected currency setting recommended for v1.1+ requiring zero database schema migrations.
+- **Feature Claims Verification**:
+  - Explicitly differentiated between in-app calculated alerts (`/alerts`) and operating-system push notifications (`flutter_local_notifications`).
+  - Explicitly differentiated between CSV metadata export and complete photo archive backups.
+
 **Last verified check results:**
-- `dart format` → All 61 source & test files formatted cleanly (0 changed).
-- `flutter analyze` → **No issues found.** (ran cleanly in 2.7s).
-- `flutter test` → **All 145/145 tests passing** across all unit, repository, service, screen, and integration test suites.
+- `dart format` → All source & test files formatted cleanly.
+- `flutter analyze` → **No issues found.**
+- `flutter test` → **All 149/149 tests passing** across all unit, repository, service, screen, and integration test suites.
 
 ---
 
 ## What Does NOT Exist Yet
 
 - **All 5 Shell Tabs Complete** — All 5 bottom navigation tabs (`Receipts`, `Warranties`, `Add`, `Alerts`, `Settings`) are now fully implemented with real UI and persistence.
+- **No push notifications** — No operating system push notifications or scheduled local notifications (Phase 7). The Alerts tab is an in-app reactive reminder screen based on calculated receipt dates.
+- **No full binary/photo backup archive** — The CSV export feature exports receipt metadata for spreadsheets; full binary archive backup including photos (.zip) is not yet implemented.
+- **No multi-currency settings** — Currently amounts are entered and displayed in USD ($); user-selected currency setting is planned for v1.1+.
 - **No OCR** — Automated text/receipt parsing is not yet implemented (Phase 10).
-- **No push notifications** — No operating system push notifications or scheduled local notifications (Phase 7).
 - **No Inter font** — System font is used.
 - **No cloud image storage/sync** — Local persistent storage only (as designed for privacy and offline speed).
 - **No statistics/analytics** — `lib/features/statistics/` directory is empty (Phase 9).

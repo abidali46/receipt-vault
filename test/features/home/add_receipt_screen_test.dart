@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
@@ -36,6 +37,41 @@ class _FailingReceiptsRepository implements ReceiptsRepository {
 
   @override
   Future<bool> updateReceipt(Receipt receipt) async => false;
+
+  @override
+  Stream<List<ReceiptCardData>> watchReceiptCards({DateTime? now}) =>
+      const Stream.empty();
+
+  @override
+  Stream<Receipt?> watchReceiptById(int id) => const Stream.empty();
+
+  @override
+  Stream<List<Receipt>> watchReceipts() => const Stream.empty();
+}
+
+/// Flexible test repository allowing custom get/update behavior for testing edit states.
+class _CustomMockReceiptsRepository implements ReceiptsRepository {
+  _CustomMockReceiptsRepository({this.onGetReceiptById});
+
+  final Future<Receipt?> Function(int id)? onGetReceiptById;
+
+  @override
+  Future<Receipt?> getReceiptById(int id) async {
+    if (onGetReceiptById != null) return onGetReceiptById!(id);
+    return null;
+  }
+
+  @override
+  Future<bool> updateReceipt(Receipt receipt) async => true;
+
+  @override
+  Future<int> insertReceipt(ReceiptsCompanion receipt) async => 1;
+
+  @override
+  Future<int> deleteReceipt(int id) async => 1;
+
+  @override
+  Future<List<Receipt>> getAllReceipts() async => [];
 
   @override
   Stream<List<ReceiptCardData>> watchReceiptCards({DateTime? now}) =>
@@ -1837,6 +1873,253 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Discard changes?'), findsNothing);
       expect(find.text('Gaming Monitor 4K'), findsOneWidget);
+    });
+
+    group('Missing-receipt and loading edit flow (Task 2)', () {
+      testWidgets(
+        'shows loading indicator while fetching receipt by ID and hides form',
+        (tester) async {
+          final completer = Completer<Receipt?>();
+          final repo = _CustomMockReceiptsRepository(
+            onGetReceiptById: (id) => completer.future,
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light,
+              home: AddReceiptScreen(receiptId: 10, repository: repo),
+            ),
+          );
+
+          // Process microtask/frame callback to trigger loading
+          await tester.pump();
+
+          // Loading indicator is shown
+          expect(
+            find.byKey(const Key('add_receipt_loading_indicator')),
+            findsOneWidget,
+          );
+          // Editable form card and fields are NOT rendered
+          expect(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            findsNothing,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_save_button')),
+            findsNothing,
+          );
+
+          // Complete with a receipt
+          completer.complete(
+            Receipt(
+              id: 10,
+              productName: 'Loaded Laptop',
+              purchaseDate: DateTime(2026, 1, 1),
+              totalAmount: 1200.0,
+              createdAt: DateTime(2026, 1, 1),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Loading indicator disappears and form is rendered with data
+          expect(
+            find.byKey(const Key('add_receipt_loading_indicator')),
+            findsNothing,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            findsOneWidget,
+          );
+          expect(find.text('Loaded Laptop'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'shows Receipt Not Found state when receipt ID does not exist in repository',
+        (tester) async {
+          final repo = _CustomMockReceiptsRepository(
+            onGetReceiptById: (id) async => null,
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light,
+              home: AddReceiptScreen(receiptId: 999, repository: repo),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Confirms not-found UI
+          expect(find.text('Receipt Not Found'), findsOneWidget);
+          expect(
+            find.text('This receipt does not exist or may have been deleted.'),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_not_found_icon')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_not_found_back_button')),
+            findsOneWidget,
+          );
+
+          // Blank editable form and save button are strictly NOT shown
+          expect(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            findsNothing,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_save_button')),
+            findsNothing,
+          );
+
+          // Back button does not show discard dialog
+          await tester.tap(find.byKey(const Key('add_receipt_back_button')));
+          await tester.pumpAndSettle();
+          expect(find.text('Discard changes?'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'shows error state with retry button when repository retrieval throws',
+        (tester) async {
+          int callCount = 0;
+          final repo = _CustomMockReceiptsRepository(
+            onGetReceiptById: (id) async {
+              callCount++;
+              if (callCount == 1) {
+                throw Exception('SQLite disk read I/O error');
+              }
+              return Receipt(
+                id: id,
+                productName: 'Retried Item',
+                purchaseDate: DateTime(2026, 2, 2),
+                totalAmount: 50.0,
+                createdAt: DateTime(2026, 2, 2),
+              );
+            },
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light,
+              home: AddReceiptScreen(receiptId: 42, repository: repo),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Confirms error UI
+          expect(find.text('Failed to load receipt'), findsOneWidget);
+          expect(
+            find.textContaining('SQLite disk read I/O error'),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_error_icon')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_error_retry_button')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_error_back_button')),
+            findsOneWidget,
+          );
+
+          // Blank editable form and save button are NOT displayed
+          expect(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            findsNothing,
+          );
+          expect(
+            find.byKey(const Key('add_receipt_save_button')),
+            findsNothing,
+          );
+
+          // Tap Retry button
+          await tester.tap(
+            find.byKey(const Key('add_receipt_error_retry_button')),
+          );
+          await tester.pumpAndSettle();
+
+          // Now loaded successfully
+          expect(callCount, 2);
+          expect(find.text('Failed to load receipt'), findsNothing);
+          expect(find.text('Retried Item'), findsOneWidget);
+          expect(
+            find.byKey(const Key('add_receipt_save_button')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'successful load by receiptId populates all fields and updates existing record',
+        (tester) async {
+          final db = AppDatabase(NativeDatabase.memory());
+          final repository = DriftReceiptsRepository(db);
+
+          final id = await repository.insertReceipt(
+            ReceiptsCompanion.insert(
+              productName: 'Sony Headphones',
+              storeName: const drift.Value('BestBuy'),
+              category: const drift.Value('Electronics'),
+              purchaseDate: DateTime(2026, 3, 10),
+              totalAmount: 199.99,
+              warrantyDurationDays: const drift.Value(365),
+              notes: const drift.Value('Includes protection plan'),
+            ),
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                databaseProvider.overrideWithValue(db),
+                receiptsRepositoryProvider.overrideWithValue(repository),
+              ],
+              child: MaterialApp(
+                theme: AppTheme.light,
+                home: AddReceiptScreen(receiptId: id, repository: repository),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Verified all fields populated
+          expect(find.text('Sony Headphones'), findsOneWidget);
+          expect(find.text('BestBuy'), findsOneWidget);
+          expect(find.text('199.99'), findsOneWidget);
+          expect(find.text('Includes protection plan'), findsOneWidget);
+
+          // Update product name
+          final nameField = find.byKey(
+            const Key('add_receipt_product_name_field'),
+          );
+          await tester.enterText(nameField, 'Sony WH-1000XM5');
+
+          // Save update
+          final saveButton = find.byKey(const Key('add_receipt_save_button'));
+          await tester.ensureVisible(saveButton);
+          await tester.tap(saveButton);
+          await tester.pumpAndSettle();
+
+          // Check DB record
+          final updated = await repository.getReceiptById(id);
+          expect(updated, isNotNull);
+          expect(updated!.productName, 'Sony WH-1000XM5');
+          expect(updated.storeName, 'BestBuy');
+          expect(updated.totalAmount, 199.99);
+
+          // Ensure no duplicate record was created
+          final all = await repository.getAllReceipts();
+          expect(all.length, 1);
+
+          await db.close();
+          await tester.pump(const Duration(milliseconds: 50));
+        },
+      );
     });
   });
 }

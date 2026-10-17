@@ -246,6 +246,35 @@ Do not skip ahead — the database task unlocks all real feature work.
 
 ---
 
+## ✅ Post-Implementation QA & Targeted Fixes (Complete)
+
+- [x] **Task 1: Improve README.md**
+  - Replaced the default Flutter starter README with accurate, comprehensive project documentation matching actual repository contents.
+  - Documented app purpose, implemented features across all 5 shell tabs and detail/edit screens, tech stack and architecture, prerequisites, setup instructions, test commands, current limitations, and planned roadmap.
+
+- [x] **Task 2: Fix Missing-Receipt Edit Flow**
+  - Inspected `AddReceiptScreen` and its route integration (`/receipts/:id/edit`).
+  - Added clear loading state (`_buildLoadingState`) with `CircularProgressIndicator` while retrieving record by ID.
+  - Added "Receipt Not Found" state (`_buildNotFoundState`) with receipt icon, informative message, and "Back to Receipts" button when ID does not exist in the database.
+  - Added error state (`_buildErrorState`) with error icon, exception details, "Retry" button, and "Back to Receipts" button when repository retrieval throws.
+  - Guaranteed blank editable form and save button are never displayed for missing or failing records.
+  - Enforced guard in `_handleSubmit` preventing update attempts before record is loaded.
+  - Updated `_isDirty` so pristine/error/not-found states do not trigger unsaved changes confirmation on exit.
+  - Added 4 regression tests in `test/features/home/add_receipt_screen_test.dart` (now 149 passing tests in suite).
+
+- [x] **Task 3: Review Currency Handling**
+  - Evaluated amount entry, storage, export, and display across the entire codebase.
+  - Identified all 3 hardcoded currency symbol locations (`AddReceiptScreen` price input prefix, `ReceiptCardData.formattedPrice`, and `ReceiptDetailScreen` details card).
+  - Confirmed SQLite schema stores amounts as pure numeric `REAL` values (`totalAmount`) and CSV export formats pure decimals (`toStringAsFixed(2)`), keeping persistence currency-agnostic.
+  - Formulated recommendation: document USD (`$`) as default for initial release, with user-selected currency setting recommended for v1.1+ requiring zero database schema migrations.
+
+- [x] **Task 4: Verify Feature Claims**
+  - Updated project documentation (`README.md`, `docs/PROJECT_OVERVIEW.md`, `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md`) to explicitly distinguish:
+    1. In-app calculated Alerts screen (`/alerts`) vs scheduled OS push notifications (Phase 7).
+    2. CSV metadata export (`ReceiptExportService`) vs complete photo archive backup (.zip).
+
+---
+
 ## 🔲 Phase 9 — Statistics (Low Priority)
 
 - `lib/features/statistics/` — Empty directory, no mockup provided.

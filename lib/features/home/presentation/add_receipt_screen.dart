@@ -10,7 +10,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:receipt_vault/app/router/app_router.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/receipt_image_service.dart';
@@ -89,6 +91,8 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
 
   bool _isLoadingInitial = false;
   Receipt? _loadedReceipt;
+  bool _isNotFound = false;
+  Object? _loadError;
 
   Receipt? get _activeReceiptToEdit => widget.receiptToEdit ?? _loadedReceipt;
   bool get _isEditing =>
@@ -137,6 +141,8 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
 
       if (widget.receiptId != null) {
         _isLoadingInitial = true;
+        _isNotFound = false;
+        _loadError = null;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _loadReceiptById(widget.receiptId!);
         });
@@ -145,6 +151,12 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
   }
 
   Future<void> _loadReceiptById(int id) async {
+    setState(() {
+      _isLoadingInitial = true;
+      _isNotFound = false;
+      _loadError = null;
+    });
+
     try {
       final ReceiptsRepository repository =
           widget.repository ?? ref.read(receiptsRepositoryProvider);
@@ -176,13 +188,23 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
             _customWarrantyController.text = days.toString();
           }
           _isLoadingInitial = false;
+          _isNotFound = false;
+          _loadError = null;
         });
       } else {
-        setState(() => _isLoadingInitial = false);
+        setState(() {
+          _isLoadingInitial = false;
+          _isNotFound = true;
+          _loadError = null;
+        });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingInitial = false);
+        setState(() {
+          _isLoadingInitial = false;
+          _isNotFound = false;
+          _loadError = e;
+        });
       }
     }
   }
@@ -200,6 +222,10 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
   /// Whether the user has modified any form field from its initial state.
   bool get _isDirty {
     if (_isSaved) return false;
+    // When editing by ID but record is loading, not found, or in error, form cannot be dirty.
+    if (widget.receiptId != null && _activeReceiptToEdit == null) {
+      return false;
+    }
     final r = _activeReceiptToEdit;
     if (r != null) {
       final nameChanged = _productNameController.text.trim() != r.productName;
@@ -346,11 +372,21 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
   void _safePop(BuildContext context) {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
+      return;
+    }
+    try {
+      context.go(AppRoutes.receipts);
+    } catch (_) {
+      // Fallback if not inside a GoRouter (e.g. basic unit widget tests)
     }
   }
 
   Future<void> _handleSubmit() async {
     if (_isSaving) return;
+
+    if (_isEditing && _activeReceiptToEdit == null) {
+      throw StateError('Cannot update receipt: receipt record is not loaded.');
+    }
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -387,9 +423,9 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
           widget.repository ?? ref.read(receiptsRepositoryProvider);
 
       if (_isEditing) {
-        final existing = _activeReceiptToEdit;
-        final receiptId = existing?.id ?? widget.receiptId!;
-        final createdAt = existing?.createdAt ?? DateTime.now();
+        final existing = _activeReceiptToEdit!;
+        final receiptId = existing.id;
+        final createdAt = existing.createdAt;
 
         final updated = Receipt(
           id: receiptId,
@@ -489,6 +525,47 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final Widget bodyContent;
+    if (_isLoadingInitial) {
+      bodyContent = _buildLoadingState();
+    } else if (_loadError != null) {
+      bodyContent = _buildErrorState(context, _loadError!);
+    } else if (widget.receiptId != null &&
+        (_isNotFound || _activeReceiptToEdit == null)) {
+      bodyContent = _buildNotFoundState(context);
+    } else {
+      bodyContent = SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Photo Selection and Preview Section
+                    _buildPhotoSection(isDark, colorScheme, theme),
+                    const SizedBox(height: 20),
+
+                    // Form Details Card
+                    _buildFormCard(isDark, colorScheme, theme),
+                    const SizedBox(height: 24),
+
+                    // Save Receipt Button
+                    _buildSaveButton(colorScheme),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return PopScope(
       canPop: !_isSaving && !_isDirty,
       onPopInvokedWithResult: (didPop, result) async {
@@ -507,41 +584,142 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
             onPressed: () => _handleBack(context),
           ),
         ),
-        body: _isLoadingInitial
-            ? const Center(child: CircularProgressIndicator())
-            : SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 20,
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Photo Selection and Preview Section
-                            _buildPhotoSection(isDark, colorScheme, theme),
-                            const SizedBox(height: 20),
+        body: bodyContent,
+      ),
+    );
+  }
 
-                            // Form Details Card
-                            _buildFormCard(isDark, colorScheme, theme),
-                            const SizedBox(height: 24),
+  Widget _buildLoadingState() {
+    return const Center(
+      child: CircularProgressIndicator(
+        key: Key('add_receipt_loading_indicator'),
+      ),
+    );
+  }
 
-                            // Save Receipt Button
-                            _buildSaveButton(colorScheme),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+  Widget _buildNotFoundState(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              key: const Key('add_receipt_not_found_icon'),
+              size: 64,
+              color: isDark
+                  ? AppColors.textDisabledDark
+                  : AppColors.textDisabledLight,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Receipt Not Found',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This receipt does not exist or may have been deleted.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: secondaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              key: const Key('add_receipt_not_found_back_button'),
+              onPressed: () => _safePop(context),
+              icon: const Icon(Icons.arrow_back, size: 18),
+              label: const Text('Back to Receipts'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primaryContainer,
+                foregroundColor: colorScheme.onPrimary,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppShapes.radiusFull,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, Object error) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              key: const Key('add_receipt_error_icon'),
+              size: 56,
+              color: colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load receipt',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: secondaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('add_receipt_error_back_button'),
+                  onPressed: () => _safePop(context),
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: const Text('Back to Receipts'),
+                ),
+                if (widget.receiptId != null)
+                  FilledButton.icon(
+                    key: const Key('add_receipt_error_retry_button'),
+                    onPressed: () => _loadReceiptById(widget.receiptId!),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Retry'),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

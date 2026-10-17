@@ -2,21 +2,31 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:receipt_vault/app/router/app_router.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
 import 'package:receipt_vault/features/receipts/domain/entities/receipt_card_data.dart';
+import 'package:receipt_vault/features/receipts/domain/entities/receipt_sort_option.dart';
+import 'package:receipt_vault/features/receipts/domain/services/receipt_discovery_service.dart';
 import 'package:receipt_vault/features/receipts/presentation/providers/receipts_providers.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/category_filter_row.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/receipt_card.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/receipt_search_bar.dart';
+import 'package:receipt_vault/features/receipts/presentation/widgets/receipt_sort_filter_bar.dart';
 import 'package:receipt_vault/features/receipts/presentation/widgets/receipts_empty_state.dart';
 
-/// Screen displaying the user's receipts with search, category filtering,
-/// and receipt card listing or empty state.
+/// Screen displaying the user's receipts with real-time search, category filtering,
+/// multiple sorting options, and receipt card listing or contextual empty states.
 ///
 /// Follows DESIGN.md specifications and the updated 5-tab mockup.
 /// Connects reactively to [receiptsStreamProvider] by default.
 class ReceiptsScreen extends ConsumerStatefulWidget {
-  const ReceiptsScreen({super.key, this.receipts, this.onReceiptTap});
+  const ReceiptsScreen({
+    super.key,
+    this.receipts,
+    this.onReceiptTap,
+    this.initialSort = ReceiptSortOption.newestPurchase,
+  });
 
   /// Optional receipts list. If provided, this list is used directly instead
   /// of watching [receiptsStreamProvider] (useful for tests with static data).
@@ -25,12 +35,16 @@ class ReceiptsScreen extends ConsumerStatefulWidget {
   /// Optional callback invoked when a receipt card is tapped.
   final ValueChanged<ReceiptCardData>? onReceiptTap;
 
+  /// Optional initial sorting strategy.
+  final ReceiptSortOption initialSort;
+
   @override
   ConsumerState<ReceiptsScreen> createState() => _ReceiptsScreenState();
 }
 
 class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
   final TextEditingController _searchController = TextEditingController();
+  late ReceiptSortOption _selectedSort;
   String _selectedCategory = 'All';
   String _searchQuery = '';
 
@@ -38,8 +52,16 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
     'All',
     'Electronics',
     'Food',
+    'Clothing',
+    'Home',
     'Others',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedSort = widget.initialSort;
+  }
 
   @override
   void dispose() {
@@ -59,6 +81,12 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
     });
   }
 
+  void _onSortSelected(ReceiptSortOption sortOption) {
+    setState(() {
+      _selectedSort = sortOption;
+    });
+  }
+
   void _resetFilters() {
     setState(() {
       _searchController.clear();
@@ -70,53 +98,70 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
   bool get _isFiltered =>
       _searchQuery.isNotEmpty || _selectedCategory.toLowerCase() != 'all';
 
-  List<ReceiptCardData> _filterReceipts(List<ReceiptCardData> receipts) {
-    return receipts.where((receipt) {
-      // Category filter
-      if (_selectedCategory.toLowerCase() != 'all') {
-        if (receipt.category.toLowerCase() != _selectedCategory.toLowerCase()) {
-          return false;
-        }
-      }
+  Widget _buildContent(List<ReceiptCardData> allReceipts) {
+    final filteredAndSorted = ReceiptDiscoveryService.filterAndSortReceipts(
+      allReceipts,
+      selectedCategory: _selectedCategory,
+      searchQuery: _searchQuery,
+      sortOption: _selectedSort,
+    );
 
-      // Search query filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        final matchesProduct = receipt.productName.toLowerCase().contains(
-          query,
-        );
-        final matchesStore =
-            receipt.storeName?.toLowerCase().contains(query) ?? false;
-        final matchesCategory = receipt.category.toLowerCase().contains(query);
+    final totalCount = allReceipts.length;
+    final filteredCount = filteredAndSorted.length;
 
-        if (!matchesProduct && !matchesStore && !matchesCategory) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
-  }
-
-  Widget _buildListOrEmpty(List<ReceiptCardData> filtered) {
-    if (filtered.isEmpty) {
+    // Completely empty database
+    if (totalCount == 0 && !_isFiltered) {
       return ReceiptsEmptyState(
-        isFiltered: _isFiltered,
+        isFiltered: false,
         onClearFilters: _resetFilters,
       );
     }
 
-    return ListView.separated(
-      itemCount: filtered.length,
-      padding: const EdgeInsets.only(bottom: 24),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final receipt = filtered[index];
-        return ReceiptCard(
-          receipt: receipt,
-          onTap: () => widget.onReceiptTap?.call(receipt),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (totalCount > 0)
+          ReceiptSortFilterBar(
+            filteredCount: filteredCount,
+            totalCount: totalCount,
+            isFiltered: _isFiltered,
+            selectedSort: _selectedSort,
+            onSortSelected: _onSortSelected,
+            onResetFilters: _resetFilters,
+          ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: filteredCount == 0
+              ? ReceiptsEmptyState(
+                  isFiltered: true,
+                  searchQuery: _searchQuery,
+                  selectedCategory: _selectedCategory,
+                  onClearFilters: _resetFilters,
+                )
+              : ListView.separated(
+                  itemCount: filteredCount,
+                  padding: const EdgeInsets.only(bottom: 24),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final receipt = filteredAndSorted[index];
+                    return ReceiptCard(
+                      receipt: receipt,
+                      onTap: () {
+                        if (widget.onReceiptTap != null) {
+                          widget.onReceiptTap!(receipt);
+                        } else {
+                          final id = int.tryParse(receipt.id);
+                          if (id != null) {
+                            context.push(AppRoutes.receiptDetailPath(id));
+                          }
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -170,15 +215,11 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
 
     Widget bodyContent;
     if (widget.receipts != null) {
-      final filtered = _filterReceipts(widget.receipts!);
-      bodyContent = _buildListOrEmpty(filtered);
+      bodyContent = _buildContent(widget.receipts!);
     } else {
       final receiptsAsync = ref.watch(receiptsStreamProvider);
       bodyContent = receiptsAsync.when(
-        data: (receipts) {
-          final filtered = _filterReceipts(receipts);
-          return _buildListOrEmpty(filtered);
-        },
+        data: (receipts) => _buildContent(receipts),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _buildErrorState(context, error),
       );
@@ -205,10 +246,39 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
           ],
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'More options',
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'reset_filters') {
+                _resetFilters();
+              } else if (value == 'add_receipt') {
+                context.push(AppRoutes.add);
+              }
+            },
+            itemBuilder: (context) => [
+              if (_isFiltered)
+                const PopupMenuItem<String>(
+                  value: 'reset_filters',
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_alt_off_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('Reset filters & search'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem<String>(
+                value: 'add_receipt',
+                child: Row(
+                  children: [
+                    Icon(Icons.add_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text('Add receipt'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -237,7 +307,7 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
                     selectedCategory: _selectedCategory,
                     onCategorySelected: _onCategorySelected,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
                   // Receipt List, Empty State, Loading, or Error
                   Expanded(child: bodyContent),

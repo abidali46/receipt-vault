@@ -16,6 +16,8 @@ class ReceiptCardData {
     required this.statusLabel,
     this.category = 'Others',
     this.icon = Icons.receipt_long_outlined,
+    this.imagePath,
+    this.purchaseDate,
   });
 
   /// Maps a database [Receipt] entity to a [ReceiptCardData] presentation model.
@@ -39,6 +41,8 @@ class ReceiptCardData {
       statusLabel: warranty.statusLabel,
       category: category,
       icon: WarrantyCalculator.iconForCategory(category),
+      imagePath: receipt.imagePath,
+      purchaseDate: receipt.purchaseDate,
     );
   }
 
@@ -65,6 +69,12 @@ class ReceiptCardData {
 
   /// Display icon for the item type.
   final IconData icon;
+
+  /// Optional local persistent image path for the receipt photo.
+  final String? imagePath;
+
+  /// Optional purchase date of the receipt, used for chronological sorting.
+  final DateTime? purchaseDate;
 
   /// Formatted price string (e.g. '$899' or '$1,200.50').
   String get formattedPrice {

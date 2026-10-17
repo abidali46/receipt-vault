@@ -10,6 +10,7 @@ class WarrantyInfo {
     required this.statusLabel,
     this.remainingDays,
     this.expiryDate,
+    this.progress = 0.0,
   });
 
   /// The evaluated warranty status.
@@ -23,6 +24,9 @@ class WarrantyInfo {
 
   /// Expiry date (null if no warranty).
   final DateTime? expiryDate;
+
+  /// Progress ratio of warranty duration remaining (0.0 to 1.0, 0.0 if expired or no warranty).
+  final double progress;
 }
 
 /// Centralized utility for computing warranty statuses, remaining durations,
@@ -49,6 +53,7 @@ class WarrantyCalculator {
         statusLabel: 'No warranty',
         remainingDays: null,
         expiryDate: null,
+        progress: 0.0,
       );
     }
 
@@ -69,6 +74,7 @@ class WarrantyCalculator {
         statusLabel: 'Expired',
         remainingDays: daysRemaining,
         expiryDate: expiryDate,
+        progress: 0.0,
       );
     }
 
@@ -78,8 +84,11 @@ class WarrantyCalculator {
         statusLabel: 'Expires today',
         remainingDays: 0,
         expiryDate: expiryDate,
+        progress: 0.0,
       );
     }
+
+    final progress = (daysRemaining / warrantyDurationDays).clamp(0.0, 1.0);
 
     if (daysRemaining <= 30) {
       return WarrantyInfo(
@@ -88,6 +97,7 @@ class WarrantyCalculator {
             '$daysRemaining ${daysRemaining == 1 ? 'day' : 'days'} left',
         remainingDays: daysRemaining,
         expiryDate: expiryDate,
+        progress: progress,
       );
     }
 
@@ -98,6 +108,7 @@ class WarrantyCalculator {
         statusLabel: '$years ${years == 1 ? 'year' : 'years'} left',
         remainingDays: daysRemaining,
         expiryDate: expiryDate,
+        progress: progress,
       );
     }
 
@@ -106,6 +117,7 @@ class WarrantyCalculator {
       statusLabel: '$daysRemaining days left',
       remainingDays: daysRemaining,
       expiryDate: expiryDate,
+      progress: progress,
     );
   }
 

@@ -34,15 +34,16 @@ The design philosophy is described in `design/DESIGN.md` as **"Digital Peace of 
 | 1 | Bottom navigation shell (5 tabs) | ✅ Implemented |
 | 2 | App theme (Material 3, light/dark) | ✅ Implemented |
 | 3 | go_router navigation with StatefulShellRoute | ✅ Implemented |
-| 4 | Receipts screen (real UI & reusable widgets) | ✅ Implemented (DB wiring pending Phase 1/2) |
+| 4 | Receipts screen (real UI, reactive stream, multi-field search & 5-way sorting) | ✅ Implemented |
 | 5 | Receipt data model (Drift + SQLite) | ✅ Implemented |
-| 6 | Receipt creation / capture flow | ⬜ Not started |
-| 7 | Receipt detail screen | ⬜ Not started |
-| 8 | Warranty tracker screen | ⬜ Not started |
-| 9 | Alerts / notifications screen | ⬜ Not started |
-| 10 | Settings screen | ⬜ Not started |
+| 6 | Receipt creation / capture flow & local image storage | ✅ Implemented |
+| 7 | Receipt detail screen & editing/deletion | ✅ Implemented |
+| 8 | Warranty tracker screen (state-aware & reactive) | ✅ Implemented |
+| 9 | Alerts / notifications screen | ✅ Implemented |
+| 10 | Settings screen (theme persistence, privacy guarantee & CSV export) | ✅ Implemented |
 | 11 | Local push notifications | ⬜ Not started |
 | 12 | OCR receipt scanning | ⬜ Not started |
+
 
 ## Implemented Receipts Screen Architecture
 
@@ -50,27 +51,34 @@ The **Receipts screen** (`lib/features/receipts/presentation/receipts_screen.dar
 
 1. **Screen Header (`ReceiptsScreen`)**:
    - `AppBar` with `receipt_long_outlined` icon in `AppColors.primary` (`#004AC6` in light mode, `#B4C5FF` in dark mode) and bold title "My Receipts".
-   - Overflow options action button (`Icons.more_vert`).
+   - Overflow options menu (`Icons.more_vert`) supporting quick reset filters and navigation.
 2. **Search Input (`ReceiptSearchBar`)**:
    - `lib/features/receipts/presentation/widgets/receipt_search_bar.dart`
-   - 8px corner radius (`AppShapes.radiusSm`), search icon, clear button suffix on text input, and `primaryContainer` blue focused border.
+   - 8px corner radius (`AppShapes.radiusSm`), search icon, clear button suffix on text input, and `primaryContainer` blue focused border. Case-insensitive multi-field search across product name, store name, and category.
 3. **Category Filters (`CategoryFilterRow`)**:
    - `lib/features/receipts/presentation/widgets/category_filter_row.dart`
-   - Horizontally scrollable pill-shaped chips: `"All"`, `"Electronics"`, `"Food"`, `"Others"`.
+   - Horizontally scrollable pill-shaped chips: `"All"`, `"Electronics"`, `"Food"`, `"Clothing"`, `"Home"`, `"Others"`.
    - Selected chip: `colorScheme.primaryContainer` (`#2563EB`) fill with white text.
    - Inactive chips: Surface fill with subtle border (`borderLight`/`borderDark`) and secondary text.
-4. **Receipt Item Card (`ReceiptCard`)**:
+4. **Receipt Discovery & Sorting Bar (`ReceiptSortFilterBar`)**:
+   - `lib/features/receipts/presentation/widgets/receipt_sort_filter_bar.dart`
+   - Dynamic item counts ("X receipts" or "X of Y receipts" when filtered).
+   - Inline pill "Clear" action button when filters are active.
+   - Material 3 `PopupMenuButton<ReceiptSortOption>` offering 5 sorting strategies: Newest purchase, Oldest purchase, Product name (A–Z), Amount (high to low), Amount (low to high).
+5. **Receipt Item Card (`ReceiptCard`)**:
    - `lib/features/receipts/presentation/widgets/receipt_card.dart`
    - 8px corner radius, 1px subtle border, soft ambient shadow (`0px 2px 4px rgba(0,0,0,0.05)`).
    - Left: 48×48 circular icon container + product name + store name.
    - Right: Right-aligned price (`$899`) + pill status badge with colored indicator dot (active green, expiring red, or expired gray).
    - Expired items display strikethrough text, muted colors, and `0.75` opacity.
-5. **Empty State (`ReceiptsEmptyState`)**:
+6. **Empty State (`ReceiptsEmptyState`)**:
    - `lib/features/receipts/presentation/widgets/receipts_empty_state.dart`
    - Pristine state: Shows `receipt_long_outlined` icon with "No receipts yet. Tap + to add your first receipt."
-   - Filtered state: Shows `search_off_outlined` icon with "No matching receipts" and a "Reset filters" button.
-6. **Data & Enums**:
-   - `lib/features/receipts/domain/entities/receipt_card_data.dart` — Pure presentation entity.
+   - Filtered state: Shows `search_off_outlined` icon with "No matching receipts", contextual explanation naming the search query and/or category, and a "Reset filters" button.
+7. **Data & Services**:
+   - `lib/features/receipts/domain/entities/receipt_card_data.dart` — Pure presentation entity with `purchaseDate`.
+   - `lib/features/receipts/domain/entities/receipt_sort_option.dart` — Sorting strategy enum.
+   - `lib/features/receipts/domain/services/receipt_discovery_service.dart` — In-memory filtering and sorting domain service.
    - `lib/shared/enums/warranty_status.dart` — Shared `WarrantyStatus` enum (`active`, `expiringSoon`, `expired`, `none`).
 
 ## Design References

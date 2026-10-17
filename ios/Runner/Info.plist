@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Receipt Vault needs camera access to photograph and store receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Receipt Vault needs access to your photo library to select receipt images.</string>
 </dict>
 </plist>

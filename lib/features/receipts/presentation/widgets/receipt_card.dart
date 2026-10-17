@@ -1,4 +1,4 @@
-// lib/features/receipts/presentation/widgets/receipt_card.dart
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
@@ -67,20 +67,8 @@ class ReceiptCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // 48x48 Icon Circle
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    receipt.icon,
-                    size: 24,
-                    color: secondaryTextColor,
-                  ),
-                ),
+                // 48x48 Leading thumbnail or category icon
+                _buildLeading(iconBg, secondaryTextColor),
                 const SizedBox(width: 14),
 
                 // Product & Store details
@@ -182,6 +170,35 @@ class ReceiptCard extends StatelessWidget {
     }
 
     return cardContent;
+  }
+
+  Widget _buildLeading(Color iconBg, Color secondaryTextColor) {
+    if (receipt.imagePath != null && receipt.imagePath!.trim().isNotEmpty) {
+      final file = File(receipt.imagePath!);
+      if (file.existsSync()) {
+        return Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+          clipBehavior: Clip.antiAlias,
+          child: Image.file(
+            file,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                Icon(receipt.icon, size: 24, color: secondaryTextColor),
+          ),
+        );
+      }
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+      child: Icon(receipt.icon, size: 24, color: secondaryTextColor),
+    );
   }
 
   static _BadgeColors _resolveBadgeColors(WarrantyStatus status, bool isDark) {

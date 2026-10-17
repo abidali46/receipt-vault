@@ -39,6 +39,13 @@ class DriftReceiptsRepository implements ReceiptsRepository {
   }
 
   @override
+  Stream<Receipt?> watchReceiptById(int id) {
+    return (_database.select(
+      _database.receipts,
+    )..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
+  }
+
+  @override
   Future<Receipt?> getReceiptById(int id) {
     return (_database.select(
       _database.receipts,

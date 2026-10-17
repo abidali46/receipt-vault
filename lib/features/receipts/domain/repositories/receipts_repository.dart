@@ -11,6 +11,9 @@ abstract class ReceiptsRepository {
   /// Emits reactive updates of receipts mapped to [ReceiptCardData] presentation models.
   Stream<List<ReceiptCardData>> watchReceiptCards({DateTime? now});
 
+  /// Emits reactive updates for a single receipt by [id], or null if not found.
+  Stream<Receipt?> watchReceiptById(int id);
+
   /// Fetches all receipts once, ordered newest purchase date first.
   Future<List<Receipt>> getAllReceipts();
 

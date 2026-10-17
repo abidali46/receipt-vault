@@ -354,5 +354,35 @@ void main() {
       expect(list.first.productName, 'Newer Purchase');
       expect(list.last.productName, 'Older Purchase');
     });
+
+    test('watchReceiptById emits updates reactively on mutations', () async {
+      final insertedId = await repository.insertReceipt(
+        ReceiptsCompanion.insert(
+          productName: 'Original Laptop',
+          purchaseDate: DateTime(2026, 1, 1),
+          totalAmount: 1000.0,
+        ),
+      );
+
+      final expectation = expectLater(
+        repository.watchReceiptById(insertedId),
+        emitsInOrder([
+          predicate<Receipt?>((r) => r?.productName == 'Original Laptop'),
+          predicate<Receipt?>(
+            (r) =>
+                r?.productName == 'Updated Laptop' && r?.totalAmount == 1200.0,
+          ),
+        ]),
+      );
+
+      await pumpEventQueue();
+
+      final existing = await repository.getReceiptById(insertedId);
+      await repository.updateReceipt(
+        existing!.copyWith(productName: 'Updated Laptop', totalAmount: 1200.0),
+      );
+
+      await expectation;
+    });
   });
 }

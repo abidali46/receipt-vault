@@ -9,6 +9,7 @@ import 'package:receipt_vault/features/receipts/domain/repositories/receipts_rep
 import 'package:receipt_vault/features/settings/presentation/providers/settings_providers.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/about_app_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/data_export_card.dart';
+import 'package:receipt_vault/features/settings/presentation/widgets/notifications_setting_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/privacy_note_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/settings_section.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/theme_selection_card.dart';
@@ -80,7 +81,14 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // Section 2: Data Management (Export & Backup)
+                  // Section 2: Notifications
+                  const SettingsSection(
+                    title: 'Notifications',
+                    subtitle: 'Manage automatic warranty expiry reminders',
+                    child: NotificationsSettingCard(),
+                  ),
+
+                  // Section 3: Data Management (Export & Backup)
                   SettingsSection(
                     title: 'Data Management',
                     subtitle: 'Export and back up your receipt records',

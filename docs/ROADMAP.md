@@ -194,12 +194,38 @@ Do not skip ahead — the database task unlocks all real feature work.
 
 ---
 
-## 🔲 Phase 7 — Local Push Notifications
+## ✅ Phase 7 — Scheduled Local Warranty Notifications (Complete)
 
-- Add `flutter_local_notifications` package.
-- Schedule notifications N days before warranty expiry.
-- Request permissions (Android 13+, iOS).
-- Settings screen toggle for notification preferences.
+- [x] **Add maintained notification dependencies**: Added `flutter_local_notifications: ^22.3.2` and `timezone: ^0.11.2`.
+- [x] **Notification initialization & service architecture**:
+  - Implemented `WarrantyNotificationService` abstract contract and `LocalWarrantyNotificationService` production implementation with safe initialization, Android notification channel creation, and timezone support.
+  - Implemented `FakeWarrantyNotificationService` test double for hermetic, deterministic testing without platform channels.
+  - Exposed globally via Riverpod `warrantyNotificationServiceProvider`.
+- [x] **Schedule warranty reminders**:
+  - Automatically schedules 30-day and 7-day reminders at 9:00 AM local time for valid, unexpired warranties.
+  - Reuses centralized `WarrantyCalculator` logic with zero duplicated expiry calculations.
+  - Strictly omits non-warranty receipts, already-expired receipts, and reminder dates that have already passed in the past.
+- [x] **Deterministic notification identifiers**:
+  - Formula: `(receiptId * 10) + 1` for 30-day reminder, `(receiptId * 10) + 2` for 7-day reminder.
+  - Eliminates ID collisions and allows immediate cancellation on edit or delete without schema migrations.
+- [x] **Receipt lifecycle synchronization**:
+  - New receipt: schedules applicable future reminders if enabled.
+  - Edited receipt: cancels existing reminders for receipt ID and schedules updated reminders for new purchase date/duration.
+  - Deleted receipt: cancels pending reminders for receipt ID.
+  - Setting disabled: cancels all pending reminders in plugin.
+  - Setting re-enabled: rebuilds pending reminders from current saved receipts in SQLite.
+  - App startup: initializes service and synchronizes reminders asynchronously without blocking UI frames.
+- [x] **Settings UI toggle & permission handling**:
+  - Added "Notifications" section with `NotificationsSettingCard` in `SettingsScreen`.
+  - Persisted user preference via `AppSettingsService.getWarrantyNotificationsEnabled()` in `app_settings.json`.
+  - Android 13+ (`POST_NOTIFICATIONS`) and iOS permission requests via `requestPermissions()`.
+  - Graceful permission denial: switch stays off and displays explanatory SnackBar directing user to system settings.
+- [x] **Platform configuration**:
+  - Android: `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE`, plus `ScheduledNotificationBootReceiver` and `ScheduledNotificationReceiver` broadcast receivers.
+  - Inexact alarms: uses `AndroidScheduleMode.inexactAllowWhileIdle` to conserve battery and comply with Google Play exact-alarm policies.
+  - iOS: `UNUserNotificationCenter` delegate assignment in `AppDelegate.swift` and Darwin authorization flow.
+- [x] **Automated test suite**:
+  - Added 19 new tests across `warranty_notification_service_test.dart`, `settings_screen_test.dart`, `receipt_detail_screen_test.dart`, and `add_receipt_screen_test.dart` (168 total passing tests in suite).
 
 ---
 

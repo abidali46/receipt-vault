@@ -579,3 +579,50 @@ Records significant technical and design decisions, their reasons, and important
    - Extended `.gitignore` to explicitly ignore local SQLite database files (`*.sqlite`, `*.sqlite-journal`, `*.sqlite-shm`, `*.sqlite-wal`, `*.db`), user preference files (`app_settings.json`), cached image directories (`receipt_images/`), and user CSV exports (`*.csv`).
 4. **Placeholder Component Audit:**
    - Verified `lib/shared/widgets/placeholder_screen.dart` is currently unmounted since all 5 navigation branches (`/receipts`, `/warranties`, `/alerts`, `/settings`, `/add`) and detail/edit routes are now production screens backed by live SQLite data. Retained as an unmounted utility widget for future phase placeholders.
+
+---
+
+## D-025: Scheduled Local Warranty Notifications via flutter_local_notifications & Inexact Battery-Friendly Alarms
+
+**Decision:** Implement scheduled local warranty notifications (`WarrantyNotificationService`, `LocalWarrantyNotificationService`) using `flutter_local_notifications: ^22.3.2` and `timezone: ^0.11.2`, providing automatic 30-day and 7-day expiration reminders at 9:00 AM local time, deterministic notification ID mapping (`(receiptId * 10) + offset`), battery-optimized inexact alarms, reactive Settings UI toggle with permission handling, and complete synchronization across receipt additions, edits, deletions, and app startups.
+
+**Details:**
+
+1. **Package Selection & Architecture:**
+   - Evaluated `flutter_local_notifications: ^22.3.2` alongside `timezone: ^0.11.2` for offline-first, time-zone-aware notification scheduling.
+   - Designed clean architectural separation:
+     - `WarrantyNotificationService`: abstract interface defining initialize, requestPermissions, areNotificationsEnabled, scheduleWarrantyReminders, cancelWarrantyReminders, cancelAllReminders, and syncAllReceiptReminders.
+     - `LocalWarrantyNotificationService`: production implementation wrapping `FlutterLocalNotificationsPlugin` and `timezone`.
+     - `FakeWarrantyNotificationService`: test double for hermetic, deterministic unit and widget testing without native platform channels.
+     - Riverpod provider: `warrantyNotificationServiceProvider` exposed globally for testability and loose coupling.
+2. **Deterministic Notification Identifier Strategy:**
+   - Defined deterministic 32-bit integer notification IDs:
+     - 30-day reminder: `(receiptId * 10) + 1` (e.g., Receipt 42 -> ID 421).
+     - 7-day reminder: `(receiptId * 10) + 2` (e.g., Receipt 42 -> ID 422).
+   - Guarantees zero ID collision across receipts and reminder horizons, while enabling targeted cancellation and rescheduling on edit/delete without requiring new database columns or ID tracking tables.
+3. **Delivery Horizons & Centralized Calculation:**
+   - Reuses centralized `WarrantyCalculator.calculate()` to evaluate valid coverage periods.
+   - Expiration dates are combined with 9:00 AM local time, subtracting 30 days and 7 days.
+   - Non-warranty receipts (`warrantyDurationDays == null` or `<= 0`) and already-expired receipts schedule 0 reminders.
+   - Reminders for dates that have already elapsed in the past are strictly omitted (e.g. if a receipt has 15 days left, only the 7-day reminder is scheduled).
+4. **Android Inexact Alarm Strategy & Battery Optimization:**
+   - Utilizes `AndroidScheduleMode.inexactAllowWhileIdle` rather than exact alarms (`SCHEDULE_EXACT_ALARM` or `USE_EXACT_ALARM`).
+   - Android 12+ (API 31+) restricts exact alarms to specialized apps (alarms, timers, calendar apps), requiring special Google Play policy compliance and user settings approval. Warranty expiration is a daily milestone where exact-to-the-minute delivery is unnecessary. Inexact alarms wake the device near 9:00 AM during normal system maintenance windows, conserving battery life while strictly respecting Google Play store policies.
+   - Configured high-importance Android notification channel (`warranty_alerts_channel`, "Warranty Expiration Reminders") with default sound and vibration.
+   - Registered `ScheduledNotificationBootReceiver` and `ScheduledNotificationReceiver` in `AndroidManifest.xml` for post-reboot notification restoration.
+5. **iOS Notification Configuration:**
+   - Configured `AppDelegate.swift` with `UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate` to ensure notification presentation while in foreground.
+   - Added Darwin initialization settings and granular permission request for alert, badge, and sound.
+6. **Settings Integration & Permission Guarding:**
+   - Extended `AppSettingsService` with `getWarrantyNotificationsEnabled()` and `setWarrantyNotificationsEnabled(bool)` (persisted in `app_settings.json`, default `true`).
+   - Integrated "Notifications" section with `NotificationsSettingCard` into `SettingsScreen`.
+   - On enabling: calls `notificationService.requestPermissions()`. If denied by user or OS policy, the switch immediately stays disabled and displays an explanatory `SnackBar`, preventing misleading "enabled" states.
+   - On disabling: cancels all pending reminders in `LocalWarrantyNotificationService`.
+   - On re-enabling: re-synchronizes all saved receipts from SQLite database.
+7. **Lifecycle Synchronization Across Operations:**
+   - **New receipt**: schedules future reminders if notifications are enabled.
+   - **Edited receipt**: cancels existing reminders for the receipt ID and schedules updated reminders for the new purchase date and duration.
+   - **Deleted receipt**: cancels pending reminders for the receipt ID.
+   - **App restart**: preloads settings and initializes `LocalWarrantyNotificationService` with non-blocking startup background synchronization.
+8. **Clear Distinction from In-App Alerts:**
+   - Clarified distinction between the in-app `AlertsScreen` (`/alerts`)—a visual, reactive tab within the app—and local scheduled notifications delivered by the operating system when Receipt Vault is closed.

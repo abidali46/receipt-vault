@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/database_provider.dart';
 import 'package:receipt_vault/core/storage/receipt_image_service.dart';
@@ -92,6 +93,7 @@ Widget _buildTestApp({
   List<ProviderObserver>? observers,
   ReceiptsRepository? repository,
   ReceiptImageService? imageService,
+  WarrantyNotificationService? notificationService,
   NavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
@@ -100,6 +102,10 @@ Widget _buildTestApp({
         receiptsRepositoryProvider.overrideWithValue(repository),
       if (imageService != null)
         receiptImageServiceProvider.overrideWithValue(imageService),
+      if (notificationService != null)
+        warrantyNotificationServiceProvider.overrideWithValue(
+          notificationService,
+        ),
       for (final o in overrides) o,
     ],
     observers: observers,
@@ -113,6 +119,7 @@ Widget _buildTestApp({
         receipt: receipt,
         repository: repository,
         imageService: imageService,
+        notificationService: notificationService,
       ),
     ),
   );
@@ -570,6 +577,69 @@ void main() {
         // Image cleanup called
         expect(testImageService.deleteCallCount, 1);
         expect(testImageService.lastDeletedPath, '/path/to/mouse.jpg');
+
+        await database.close();
+        await tester.pump(const Duration(milliseconds: 50));
+      },
+    );
+
+    testWidgets(
+      'deleting a receipt cancels its scheduled warranty notifications',
+      (tester) async {
+        final database = AppDatabase(NativeDatabase.memory());
+        final fakeNotificationService = FakeWarrantyNotificationService();
+
+        final id = await database
+            .into(database.receipts)
+            .insert(
+              ReceiptsCompanion.insert(
+                productName: 'Monitor',
+                purchaseDate: DateTime(2026, 1, 1),
+                totalAmount: 299.99,
+                warrantyDurationDays: const drift.Value(365),
+              ),
+            );
+
+        // Pre-populate scheduled notifications for this receipt
+        final receipt = await (database.select(
+          database.receipts,
+        )..where((tbl) => tbl.id.equals(id))).getSingle();
+        await fakeNotificationService.scheduleWarrantyReminders(
+          receipt,
+          now: DateTime(2026, 2, 1),
+        );
+        expect(
+          (await fakeNotificationService.getScheduledReminders()).length,
+          2,
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            receiptId: id,
+            overrides: [databaseProvider.overrideWithValue(database)],
+            notificationService: fakeNotificationService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap delete
+        final deleteBtn = find.byKey(const Key('receipt_detail_delete_button'));
+        await tester.ensureVisible(deleteBtn);
+        await tester.tap(deleteBtn);
+        await tester.pumpAndSettle();
+
+        // Confirm delete
+        await tester.tap(
+          find.byKey(const Key('receipt_detail_delete_confirm_button')),
+        );
+        await tester.pumpAndSettle();
+
+        // Reminders for this receipt should be cancelled
+        expect(
+          fakeNotificationService.callLog,
+          contains('cancelWarrantyReminders:$id'),
+        );
+        expect(await fakeNotificationService.getScheduledReminders(), isEmpty);
 
         await database.close();
         await tester.pump(const Duration(milliseconds: 50));

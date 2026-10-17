@@ -14,6 +14,12 @@ abstract class AppSettingsService {
 
   /// Persists the selected [ThemeMode].
   Future<void> setThemeMode(ThemeMode mode);
+
+  /// Loads whether warranty reminder notifications are enabled. Defaults to true.
+  Future<bool> getWarrantyNotificationsEnabled();
+
+  /// Persists whether warranty reminder notifications are enabled.
+  Future<void> setWarrantyNotificationsEnabled(bool enabled);
 }
 
 /// Lightweight, zero-new-dependency implementation of [AppSettingsService]
@@ -27,6 +33,8 @@ class LocalFileAppSettingsService implements AppSettingsService {
 
   static const String _fileName = 'app_settings.json';
   static const String _themeModeKey = 'theme_mode';
+  static const String _notificationsEnabledKey =
+      'warranty_notifications_enabled';
 
   File? _cachedFile;
 
@@ -84,13 +92,59 @@ class LocalFileAppSettingsService implements AppSettingsService {
       // Graceful fallback if filesystem write fails
     }
   }
+
+  @override
+  Future<bool> getWarrantyNotificationsEnabled() async {
+    try {
+      final file = await _getFile();
+      if (!await file.exists()) {
+        return true;
+      }
+      final content = await file.readAsString();
+      final data = jsonDecode(content);
+      if (data is Map<String, dynamic>) {
+        final enabled = data[_notificationsEnabledKey];
+        if (enabled is bool) {
+          return enabled;
+        }
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  @override
+  Future<void> setWarrantyNotificationsEnabled(bool enabled) async {
+    try {
+      final file = await _getFile();
+      Map<String, dynamic> data = {};
+      if (await file.exists()) {
+        try {
+          final content = await file.readAsString();
+          final parsed = jsonDecode(content);
+          if (parsed is Map<String, dynamic>) {
+            data = parsed;
+          }
+        } catch (_) {}
+      }
+      data[_notificationsEnabledKey] = enabled;
+      await file.writeAsString(jsonEncode(data), flush: true);
+    } catch (_) {
+      // Graceful fallback if filesystem write fails
+    }
+  }
 }
 
 /// In-memory test double for fast, hermetic testing without file system side effects.
 class InMemoryAppSettingsService implements AppSettingsService {
-  InMemoryAppSettingsService([this._themeMode = ThemeMode.system]);
+  InMemoryAppSettingsService([
+    this._themeMode = ThemeMode.system,
+    this._warrantyNotificationsEnabled = true,
+  ]);
 
   ThemeMode _themeMode;
+  bool _warrantyNotificationsEnabled;
 
   @override
   Future<ThemeMode> getThemeMode() async => _themeMode;
@@ -98,5 +152,14 @@ class InMemoryAppSettingsService implements AppSettingsService {
   @override
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
+  }
+
+  @override
+  Future<bool> getWarrantyNotificationsEnabled() async =>
+      _warrantyNotificationsEnabled;
+
+  @override
+  Future<void> setWarrantyNotificationsEnabled(bool enabled) async {
+    _warrantyNotificationsEnabled = enabled;
   }
 }

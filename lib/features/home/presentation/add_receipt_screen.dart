@@ -14,11 +14,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receipt_vault/app/router/app_router.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/receipt_image_service.dart';
 import 'package:receipt_vault/features/receipts/domain/repositories/receipts_repository.dart';
 import 'package:receipt_vault/features/receipts/domain/services/warranty_calculator.dart';
 import 'package:receipt_vault/features/receipts/presentation/providers/receipts_providers.dart';
+import 'package:receipt_vault/features/settings/presentation/providers/settings_providers.dart';
 
 /// Form screen for capturing, validating, and persisting receipt and warranty details.
 class AddReceiptScreen extends ConsumerStatefulWidget {
@@ -30,7 +32,11 @@ class AddReceiptScreen extends ConsumerStatefulWidget {
     this.imageService,
     this.receiptToEdit,
     this.receiptId,
+    this.notificationService,
   });
+
+  /// Optional notification service override for testing.
+  final WarrantyNotificationService? notificationService;
 
   /// Optional receipt to edit. When supplied, form fields are pre-populated
   /// and saving updates the existing record instead of inserting a duplicate.
@@ -445,7 +451,20 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
           throw Exception('Failed to update receipt record.');
         }
 
-        formData['id'] = receiptId;
+        final int effectiveId = widget.receiptId ?? _activeReceiptToEdit!.id;
+
+        try {
+          final WarrantyNotificationService notifService =
+              widget.notificationService ??
+              ref.read(warrantyNotificationServiceProvider);
+          final notificationsEnabled = ref.read(warrantyNotificationsProvider);
+          await notifService.cancelWarrantyReminders(effectiveId);
+          if (notificationsEnabled) {
+            await notifService.scheduleWarrantyReminders(updated);
+          }
+        } catch (_) {}
+
+        formData['id'] = effectiveId;
 
         if (!mounted) return;
 
@@ -487,6 +506,19 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
 
       final insertedId = await repository.insertReceipt(companion);
       formData['id'] = insertedId;
+
+      try {
+        final notificationsEnabled = ref.read(warrantyNotificationsProvider);
+        if (notificationsEnabled) {
+          final WarrantyNotificationService notifService =
+              widget.notificationService ??
+              ref.read(warrantyNotificationServiceProvider);
+          final savedReceipt = await repository.getReceiptById(insertedId);
+          if (savedReceipt != null) {
+            await notifService.scheduleWarrantyReminders(savedReceipt);
+          }
+        }
+      } catch (_) {}
 
       if (!mounted) return;
 

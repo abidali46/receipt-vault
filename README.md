@@ -52,13 +52,20 @@ Receipt Vault gives you digital peace of mind by centralizing your receipts and 
 - **Urgency Grouping**: Categorizes warranties into "Expiring Soon" and "Recently Expired".
 - **Deterministic Prioritization**: Sorted by impending expiry date so the most urgent items appear first.
 - **"All Clear" State**: Friendly reassurance and direct link back to warranties when no alerts require attention.
+- **Complementary to Local Push Notifications**: Provides an in-app visual hub for reviewing expiring warranties, complementing scheduled system notifications.
 
-### 6. Settings & CSV Export (`/settings`)
+### 6. Settings & System Notifications (`/settings`)
+- **Warranty Notifications Toggle**: Turn scheduled local warranty notifications on or off with system permission handling and graceful denial feedback.
 - **Theme Selection**: Seamless switching between System Default, Light, and Dark mode.
-- **Local Settings Persistence**: Theme preference persisted in the local SQLite database across app restarts.
+- **Local Settings Persistence**: Settings preferences persisted in local storage (`app_settings.json`) across app restarts.
 - **RFC 4180 CSV Export**: User-controlled export with proper comma, quote, and newline escaping.
 - **Storage Choice**: Save directly to device Downloads or Documents folders, or copy CSV content to the clipboard.
 - **Privacy Disclosure**: Transparent privacy notice confirming all data and images remain strictly on the device.
+
+### 7. Scheduled Local Warranty Notifications
+- **Background Reminders**: Scheduled reminders sent 30 days and 7 days prior to warranty expiration at 9:00 AM local time, even when the app is closed.
+- **Full Lifecycle Synchronization**: Automatically schedules, updates, or cancels reminders when receipts are added, edited, or deleted.
+- **Battery-Friendly Scheduling**: Uses inexact alarms (`AndroidScheduleMode.inexactAllowWhileIdle`) on Android to conserve battery while respecting Google Play policies.
 
 ---
 
@@ -68,6 +75,7 @@ Receipt Vault gives you digital peace of mind by centralizing your receipts and 
 - **State Management**: [Riverpod](https://riverpod.dev) (`flutter_riverpod`, `riverpod_annotation`, `riverpod_generator`)
 - **Routing**: [GoRouter](https://pub.dev/packages/go_router) with `StatefulShellRoute` for independent tab stacks
 - **Database & Persistence**: [Drift](https://drift.simonbinder.eu/) (type-safe SQLite abstraction) with `sqlite3_flutter_libs`
+- **Local Notifications**: [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) with [timezone](https://pub.dev/packages/timezone) for local time-zone-aware scheduling
 - **Media Storage**: Local file system management via `path_provider` and private persistent storage
 - **Design System**: Material 3 with tailored light and dark color schemes (`AppTheme`, `AppColors`, `AppTypography`, `AppShapes`)
 
@@ -151,15 +159,15 @@ dart format .
 ## Current Limitations & Planned Features
 
 ### Current Limitations (v1.0)
-- **In-App Warranty Alerts**: The Alerts screen provides reactive, computed reminders within the app. Background operating-system push notifications are not yet scheduled.
+- **Local-Only Scheduling**: Reminders are delivered via on-device local notifications; no remote push notification server (APNs/FCM) or account system is used, by design.
 - **CSV Metadata Export vs Full Backup**: The export feature outputs structured receipt metadata as an RFC 4180 CSV file suitable for spreadsheets. It does not export receipt image files as a bundled zip archive.
 - **Currency**: Amounts are currently represented with standard dollar currency formatting (`$`).
 - **Manual Data Entry**: Receipt fields are filled manually; automatic OCR camera parsing is not yet implemented.
 - **Local-Only**: Data is stored solely on the current device. There is no cloud sync or multi-device account synchronization.
 
 ### Roadmap & Planned Features
-- **Phase 7 — Local Push Notifications**: Scheduling system notifications using `flutter_local_notifications` N days prior to warranty expiration.
 - **Phase 8 — OCR Receipt Scanning**: Automatic extraction of store name, purchase date, and total amount using on-device text recognition.
+- **Phase 9 — Statistics & Analytics**: Overview dashboards and expense breakdown charts.
 - **Multi-Currency Support**: User-configurable currency symbol and formatting via Settings.
 - **Full Archive Backup**: Export and import complete zip archives containing both SQLite metadata and attached receipt photos.
 

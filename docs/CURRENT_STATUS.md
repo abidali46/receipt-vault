@@ -110,11 +110,11 @@ A fully functional, responsive Receipts screen matching the 5-tab updated mockup
 | Screen | File | Status |
 |--------|------|--------|
 | Receipts | `lib/features/receipts/presentation/receipts_screen.dart` | ✅ Real UI connected to reactive database stream, multi-field search, category filtering, and 5 sorting options |
-| Receipt Details | `lib/features/receipts/presentation/receipt_detail_screen.dart` | ✅ Real UI connected to reactive SQLite stream by ID, warranty progress, photo preview, edit action, and deletion with confirmation & safe image cleanup |
+| Receipt Details | `lib/features/receipts/presentation/receipt_detail_screen.dart` | ✅ Real UI connected to reactive SQLite stream by ID, warranty progress, photo preview, edit action, and deletion with confirmation, safe image cleanup & reminder cancellation |
 | Warranties | `lib/features/warranty/presentation/warranty_screen.dart` | ✅ Real UI backed by reactive SQLite receipt stream, centralized warranty calculation, state-aware filtering, progress bars, card navigation, and contextual empty states |
 | Alerts | `lib/features/alerts/presentation/alerts_screen.dart` | ✅ Real UI backed by reactive SQLite receipt stream, calculated warranty reminders, urgency sorting, filter chips, card navigation, and contextual empty states |
-| Settings | `lib/features/settings/presentation/settings_screen.dart` | ✅ Real UI with theme selection, local persistence, RFC 4180 CSV export/backup, privacy note, and app info |
-| Add / Edit Receipt | `lib/features/home/presentation/add_receipt_screen.dart` | ✅ Real Form UI, Photo Selection & Local Storage, Validation, SQLite Persistence & Edit Mode |
+| Settings | `lib/features/settings/presentation/settings_screen.dart` | ✅ Real UI with theme selection, warranty notification toggle & permission handling, RFC 4180 CSV export/backup, privacy note, and app info |
+| Add / Edit Receipt | `lib/features/home/presentation/add_receipt_screen.dart` | ✅ Real Form UI, Photo Selection & Local Storage, Validation, SQLite Persistence & Edit Mode, and Automatic Notification Scheduling |
 
 ### 7. Add Receipt Form UI, Photo Storage & Persistence — `lib/features/home/presentation/add_receipt_screen.dart`
 
@@ -472,22 +472,50 @@ Targeted fixes, documentation accuracy improvements, and currency review:
 - **Currency Handling Review**:
   - Confirmed SQLite schema stores amounts as pure numeric `REAL` values (`totalAmount`) and CSV export formats pure decimals (`toStringAsFixed(2)`), keeping persistence currency-agnostic.
   - Identified 3 places with hardcoded dollar symbols (`AddReceiptScreen` price input prefix, `ReceiptCardData.formattedPrice`, and `ReceiptDetailScreen` details card).
-  - Documented recommendation: document USD (`$`) as default for initial release, with user-selected currency setting recommended for v1.1+ requiring zero database schema migrations.
-- **Feature Claims Verification**:
-  - Explicitly differentiated between in-app calculated alerts (`/alerts`) and operating-system push notifications (`flutter_local_notifications`).
-  - Explicitly differentiated between CSV metadata export and complete photo archive backups.
+### 17. Scheduled Local Warranty Notifications — `lib/core/services/warranty_notification_service.dart`
+
+A complete, offline-first scheduled local notifications service integrated with the receipt lifecycle and Settings:
+- **Service Layer & Timezone Scheduling**:
+  - `WarrantyNotificationService`: abstract interface for initialization, OS permission requests, scheduling, cancellation, and synchronization.
+  - `LocalWarrantyNotificationService`: production implementation wrapping `FlutterLocalNotificationsPlugin` and `timezone/timezone.dart`.
+  - `FakeWarrantyNotificationService`: hermetic test double for unit and widget testing without platform channels.
+  - Riverpod provider: `warrantyNotificationServiceProvider`.
+- **Reminder Horizons & Scheduling Policy**:
+  - Schedules 30-day and 7-day reminders at 9:00 AM local time for valid, unexpired warranties.
+  - Strictly omits receipts without warranties (`warrantyDurationDays == null` or `<= 0`) and already-expired warranties.
+  - Strictly omits reminder timestamps that have already passed in the past.
+- **Deterministic ID Mapping Strategy**:
+  - 30-day reminder: `(receiptId * 10) + 1` (e.g., Receipt 42 -> ID 421).
+  - 7-day reminder: `(receiptId * 10) + 2` (e.g., Receipt 42 -> ID 422).
+  - Zero collision risk across receipts and horizons; enables immediate targeted cancellation without external tracking tables or schema migrations.
+- **Receipt Lifecycle Synchronization**:
+  - **New receipt (`AddReceiptScreen`)**: schedules future reminders if notifications are enabled.
+  - **Edited receipt (`AddReceiptScreen`)**: cancels existing reminders for the receipt ID and schedules updated reminders for the updated purchase date and duration.
+  - **Deleted receipt (`ReceiptDetailScreen`)**: cancels pending reminders for the receipt ID.
+  - **App startup (`main.dart`)**: initializes notification channels and synchronizes reminders asynchronously without blocking the UI.
+- **Settings UI & Permission Handling (`NotificationsSettingCard`)**:
+  - Dedicated "Notifications" section on `SettingsScreen` with toggle switch and supporting caption.
+  - Persists preference in `app_settings.json` via `AppSettingsService.getWarrantyNotificationsEnabled()` (defaults to `true`).
+  - Requests OS permissions (`POST_NOTIFICATIONS` on Android 13+, alert/badge/sound on iOS) when toggled on.
+  - If permissions are denied by the OS or user, the toggle reverts to off and displays an explanatory `SnackBar`, preventing misleading "enabled" states.
+  - Toggling off cancels all pending reminders; toggling on re-synchronizes all saved receipts.
+- **Platform Configuration & Battery Optimization**:
+  - Android permissions: `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE`.
+  - Android receivers: `ScheduledNotificationBootReceiver` and `ScheduledNotificationReceiver`.
+  - Battery optimization: uses `AndroidScheduleMode.inexactAllowWhileIdle` to conserve battery and avoid Google Play exact-alarm policy restrictions.
+  - iOS configuration: `UNUserNotificationCenter.current().delegate` assigned in `AppDelegate.swift`.
 
 **Last verified check results:**
 - `dart format` → All source & test files formatted cleanly.
 - `flutter analyze` → **No issues found.**
-- `flutter test` → **All 149/149 tests passing** across all unit, repository, service, screen, and integration test suites.
+- `flutter test` → **All 168/168 tests passing** across all unit, repository, service, screen, and integration test suites.
 
 ---
 
 ## What Does NOT Exist Yet
 
 - **All 5 Shell Tabs Complete** — All 5 bottom navigation tabs (`Receipts`, `Warranties`, `Add`, `Alerts`, `Settings`) are now fully implemented with real UI and persistence.
-- **No push notifications** — No operating system push notifications or scheduled local notifications (Phase 7). The Alerts tab is an in-app reactive reminder screen based on calculated receipt dates.
+- **Scheduled Local Notifications Complete (Phase 7)** — Scheduled local notifications (30-day and 7-day reminders) are fully implemented and synchronized. Cloud-based remote push notifications (APNs / Firebase Cloud Messaging) are intentionally omitted to preserve privacy and offline-first operation.
 - **No full binary/photo backup archive** — The CSV export feature exports receipt metadata for spreadsheets; full binary archive backup including photos (.zip) is not yet implemented.
 - **No multi-currency settings** — Currently amounts are entered and displayed in USD ($); user-selected currency setting is planned for v1.1+.
 - **No OCR** — Automated text/receipt parsing is not yet implemented (Phase 10).
@@ -511,6 +539,8 @@ Targeted fixes, documentation accuracy improvements, and currency review:
 | `path_provider` | ^2.1.6 | ✅ Yes (getApplicationDocumentsDirectory for DB & receipt images) |
 | `path` | ^1.9.1 | ✅ Yes (Database and receipt image path joining) |
 | `image_picker` | ^1.2.4 | ✅ Yes (Camera capture & gallery photo selection) |
+| `flutter_local_notifications` | ^22.3.2 | ✅ Yes (Scheduled local warranty expiration reminders) |
+| `timezone` | ^0.11.2 | ✅ Yes (Time-zone-aware notification delivery calculations) |
 | `riverpod_annotation` | ^4.0.7 | ❌ Available for future providers |
 
 ### Dev

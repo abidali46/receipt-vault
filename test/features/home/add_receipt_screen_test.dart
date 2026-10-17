@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/database_provider.dart';
 import 'package:receipt_vault/core/storage/receipt_image_service.dart';
@@ -18,6 +19,7 @@ import 'package:receipt_vault/features/receipts/domain/entities/receipt_card_dat
 import 'package:receipt_vault/features/receipts/domain/repositories/receipts_repository.dart';
 import 'package:receipt_vault/features/receipts/presentation/providers/receipts_providers.dart';
 import 'package:receipt_vault/features/receipts/presentation/receipts_screen.dart';
+import 'package:receipt_vault/features/settings/presentation/providers/settings_providers.dart';
 
 /// Test mock that fails on insert to test error handling.
 class _FailingReceiptsRepository implements ReceiptsRepository {
@@ -2115,6 +2117,207 @@ void main() {
           // Ensure no duplicate record was created
           final all = await repository.getAllReceipts();
           expect(all.length, 1);
+
+          await db.close();
+          await tester.pump(const Duration(milliseconds: 50));
+        },
+      );
+    });
+
+    group('Warranty Notifications Integration', () {
+      testWidgets(
+        'creating a receipt with valid warranty schedules notifications when enabled',
+        (tester) async {
+          final db = AppDatabase(NativeDatabase.memory());
+          final repository = DriftReceiptsRepository(db);
+          final fakeNotificationService = FakeWarrantyNotificationService();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                databaseProvider.overrideWithValue(db),
+                receiptsRepositoryProvider.overrideWithValue(repository),
+                initialWarrantyNotificationsEnabledProvider.overrideWithValue(
+                  true,
+                ),
+                warrantyNotificationServiceProvider.overrideWithValue(
+                  fakeNotificationService,
+                ),
+              ],
+              child: MaterialApp(
+                theme: AppTheme.light,
+                home: AddReceiptScreen(
+                  repository: repository,
+                  notificationService: fakeNotificationService,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Enter product name and price
+          await tester.enterText(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            'MacBook Air',
+          );
+          await tester.enterText(
+            find.byKey(const Key('add_receipt_price_field')),
+            '999.00',
+          );
+
+          // Select 12 months warranty
+          final dropdown = find.byKey(
+            const Key('add_receipt_warranty_dropdown'),
+          );
+          await tester.ensureVisible(dropdown);
+          await tester.tap(dropdown);
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('12 months (1 year)').last);
+          await tester.pumpAndSettle();
+
+          // Save receipt
+          final saveButton = find.byKey(const Key('add_receipt_save_button'));
+          await tester.ensureVisible(saveButton);
+          await tester.tap(saveButton);
+          await tester.pumpAndSettle();
+
+          // Check that reminders were scheduled
+          expect(
+            fakeNotificationService.callLog,
+            anyElement(contains('MacBook Air')),
+          );
+          expect(
+            (await fakeNotificationService.getScheduledReminders()).length,
+            2,
+          );
+
+          await db.close();
+          await tester.pump(const Duration(milliseconds: 50));
+        },
+      );
+
+      testWidgets(
+        'editing a receipt cancels old reminders and schedules updated reminders',
+        (tester) async {
+          final db = AppDatabase(NativeDatabase.memory());
+          final repository = DriftReceiptsRepository(db);
+          final fakeNotificationService = FakeWarrantyNotificationService();
+
+          final id = await repository.insertReceipt(
+            ReceiptsCompanion.insert(
+              productName: 'Gaming Mouse',
+              purchaseDate: DateTime.now(),
+              totalAmount: 50.0,
+              warrantyDurationDays: const drift.Value(180),
+            ),
+          );
+
+          // Pre-populate scheduled reminders
+          final initialReceipt = (await repository.getReceiptById(id))!;
+          await fakeNotificationService.scheduleWarrantyReminders(
+            initialReceipt,
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                databaseProvider.overrideWithValue(db),
+                receiptsRepositoryProvider.overrideWithValue(repository),
+                initialWarrantyNotificationsEnabledProvider.overrideWithValue(
+                  true,
+                ),
+                warrantyNotificationServiceProvider.overrideWithValue(
+                  fakeNotificationService,
+                ),
+              ],
+              child: MaterialApp(
+                theme: AppTheme.light,
+                home: AddReceiptScreen(
+                  receiptId: id,
+                  repository: repository,
+                  notificationService: fakeNotificationService,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Update product name
+          final nameField = find.byKey(
+            const Key('add_receipt_product_name_field'),
+          );
+          await tester.enterText(nameField, 'Gaming Mouse Pro');
+
+          // Save
+          final saveButton = find.byKey(const Key('add_receipt_save_button'));
+          await tester.ensureVisible(saveButton);
+          await tester.tap(saveButton);
+          await tester.pumpAndSettle();
+
+          expect(
+            fakeNotificationService.callLog,
+            contains('cancelWarrantyReminders:$id'),
+          );
+          expect(
+            fakeNotificationService.callLog,
+            anyElement(contains('Gaming Mouse Pro')),
+          );
+
+          await db.close();
+          await tester.pump(const Duration(milliseconds: 50));
+        },
+      );
+
+      testWidgets(
+        'creating a receipt with no warranty does not schedule reminders',
+        (tester) async {
+          final db = AppDatabase(NativeDatabase.memory());
+          final repository = DriftReceiptsRepository(db);
+          final fakeNotificationService = FakeWarrantyNotificationService();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                databaseProvider.overrideWithValue(db),
+                receiptsRepositoryProvider.overrideWithValue(repository),
+                initialWarrantyNotificationsEnabledProvider.overrideWithValue(
+                  true,
+                ),
+                warrantyNotificationServiceProvider.overrideWithValue(
+                  fakeNotificationService,
+                ),
+              ],
+              child: MaterialApp(
+                theme: AppTheme.light,
+                home: AddReceiptScreen(
+                  repository: repository,
+                  notificationService: fakeNotificationService,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Enter product name and price, leave warranty as No warranty
+          await tester.enterText(
+            find.byKey(const Key('add_receipt_product_name_field')),
+            'Groceries',
+          );
+          await tester.enterText(
+            find.byKey(const Key('add_receipt_price_field')),
+            '25.00',
+          );
+
+          final saveButton = find.byKey(const Key('add_receipt_save_button'));
+          await tester.ensureVisible(saveButton);
+          await tester.tap(saveButton);
+          await tester.pumpAndSettle();
+
+          expect(
+            await fakeNotificationService.getScheduledReminders(),
+            isEmpty,
+          );
 
           await db.close();
           await tester.pump(const Duration(milliseconds: 50));

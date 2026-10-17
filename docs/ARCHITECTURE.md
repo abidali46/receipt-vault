@@ -7,11 +7,12 @@
 | Language         | Dart 3 (SDK ^3.12.0)                                                                                                                                            |
 | UI Framework     | Flutter (Material 3)                                                                                                                                            |
 | Routing          | go_router ^18.0.2                                                                                                                                               |
-| State Management | flutter_riverpod ^3.4.3 (ProviderScope + databaseProvider + receiptsStreamProvider + receiptImageServiceProvider + settingsServiceProvider + themeModeProvider) |
+| State Management | flutter_riverpod ^3.4.3 (ProviderScope + databaseProvider + receiptsStreamProvider + receiptImageServiceProvider + settingsServiceProvider + themeModeProvider + warrantyNotificationServiceProvider) |
 | Local Database   | Drift ^2.35.2 (SQLite, NativeDatabase isolate)                                                                                                                  |
 | Media / Storage  | image_picker ^1.2.4 (Camera capture & gallery selection), path_provider ^2.1.6                                                                                  |
+| Notifications    | flutter_local_notifications ^22.3.2, timezone ^0.11.2                                                                                                           |
 | Code Generation  | build_runner ^2.15.1, drift_dev ^2.35.1                                                                                                                         |
-| Testing          | flutter_test (145 unit, repository, service, screen, and widget tests)                                                                                          |
+| Testing          | flutter_test (168 unit, repository, service, screen, and widget tests)                                                                                          |
 
 ## Folder Structure
 
@@ -27,7 +28,8 @@ lib/
 │   └── theme/
 │       └── app_theme.dart              ← AppColors, AppShapes, AppTheme.light/dark (resolved M3 tokens)
 ├── core/
-│   ├── services/                       ← (empty — future services: notifications, OCR)
+│   ├── services/
+│   │   └── warranty_notification_service.dart ← WarrantyNotificationService, LocalWarrantyNotificationService, and FakeWarrantyNotificationService
 │   ├── storage/
 │   │   ├── app_database.dart           ← Drift AppDatabase & Receipts table definition
 │   │   ├── app_database.g.dart         ← Generated Drift code ($ReceiptsTable, Receipt, companion)
@@ -88,6 +90,7 @@ lib/
 │   │           ├── about_app_card.dart  ← App title, version badge, description, and build metadata
 │   │           ├── data_export_card.dart ← Data export card tile with CSV action and photo disclaimer
 │   │           ├── export_receipts_dialog.dart ← Modal export dialog with destination selector, filename editor, copy clipboard, & progress
+│   │           ├── notifications_setting_card.dart ← Warranty notifications switch with permission handling and SnackBar feedback
 │   │           ├── privacy_note_card.dart ← Privacy assurance card explaining 100% offline local storage
 │   │           ├── settings_section.dart← Reusable section wrapper with title and subtitle
 │   │           └── theme_selection_card.dart ← Radio selector for System Default, Light, and Dark modes

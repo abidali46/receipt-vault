@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:receipt_vault/app/router/app_router.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/receipt_image_service.dart';
 import 'package:receipt_vault/features/receipts/domain/repositories/receipts_repository.dart';
@@ -26,6 +27,7 @@ class ReceiptDetailScreen extends ConsumerStatefulWidget {
     this.receipt,
     this.repository,
     this.imageService,
+    this.notificationService,
   });
 
   /// The database ID of the receipt to display.
@@ -39,6 +41,9 @@ class ReceiptDetailScreen extends ConsumerStatefulWidget {
 
   /// Optional image service override for testing.
   final ReceiptImageService? imageService;
+
+  /// Optional notification service override for testing.
+  final WarrantyNotificationService? notificationService;
 
   @override
   ConsumerState<ReceiptDetailScreen> createState() =>
@@ -1124,7 +1129,17 @@ class _ReceiptDetailScreenState extends ConsumerState<ReceiptDetailScreen> {
         );
       }
 
-      // 2. Safe image cleanup: never delete if another receipt references it.
+      // 2. Cancel warranty reminders
+      try {
+        final WarrantyNotificationService notificationService =
+            widget.notificationService ??
+            ref.read(warrantyNotificationServiceProvider);
+        await notificationService.cancelWarrantyReminders(item.id);
+      } catch (_) {
+        // Notification cancellation should not block deletion completion
+      }
+
+      // 3. Safe image cleanup: never delete if another receipt references it.
       if (imagePath != null && imagePath.trim().isNotEmpty) {
         try {
           await imageService.deleteImageIfUnreferenced(

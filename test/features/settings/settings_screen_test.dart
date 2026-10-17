@@ -6,26 +6,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_settings_service.dart';
 import 'package:receipt_vault/features/settings/presentation/providers/settings_providers.dart';
 import 'package:receipt_vault/features/settings/presentation/settings_screen.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/about_app_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/data_export_card.dart';
+import 'package:receipt_vault/features/settings/presentation/widgets/notifications_setting_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/privacy_note_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/theme_selection_card.dart';
 
 Widget _buildTestApp({
   AppSettingsService? settingsService,
+  WarrantyNotificationService? notificationService,
   ThemeMode initialThemeMode = ThemeMode.system,
   ThemeMode themeMode = ThemeMode.light,
+  bool initialNotificationsEnabled = true,
 }) {
   final service =
       settingsService ?? InMemoryAppSettingsService(initialThemeMode);
+  final notifService = notificationService ?? FakeWarrantyNotificationService();
 
   return ProviderScope(
     overrides: [
       settingsServiceProvider.overrideWithValue(service),
       initialThemeModeProvider.overrideWithValue(initialThemeMode),
+      initialWarrantyNotificationsEnabledProvider.overrideWithValue(
+        initialNotificationsEnabled,
+      ),
+      warrantyNotificationServiceProvider.overrideWithValue(notifService),
     ],
     child: MaterialApp(
       theme: AppTheme.light,
@@ -102,20 +111,112 @@ void main() {
   });
 
   group('SettingsScreen Widget Tests', () {
-    testWidgets('renders all four settings sections', (tester) async {
+    testWidgets('renders all settings sections including notifications', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
+      expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Data Management'), findsOneWidget);
       expect(find.text('Data & Privacy'), findsOneWidget);
       expect(find.text('About'), findsOneWidget);
 
       expect(find.byType(ThemeSelectionCard), findsOneWidget);
+      expect(find.byType(NotificationsSettingCard), findsOneWidget);
       expect(find.byType(DataExportCard), findsOneWidget);
       expect(find.byType(PrivacyNoteCard), findsOneWidget);
       expect(find.byType(AboutAppCard), findsOneWidget);
+    });
+
+    testWidgets(
+      'renders notifications switch and toggles preference on and off',
+      (tester) async {
+        final settingsService = InMemoryAppSettingsService();
+        final notifService = FakeWarrantyNotificationService();
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            settingsService: settingsService,
+            notificationService: notifService,
+            initialNotificationsEnabled: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final switchFinder = find.byKey(
+          const Key('settings_warranty_notifications_switch'),
+        );
+        expect(switchFinder, findsOneWidget);
+        expect(tester.widget<Switch>(switchFinder).value, isTrue);
+
+        // Tap switch to turn OFF
+        await tester.tap(switchFinder);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<Switch>(switchFinder).value, isFalse);
+        expect(
+          await settingsService.getWarrantyNotificationsEnabled(),
+          isFalse,
+        );
+        expect(notifService.callLog, contains('cancelAllReminders'));
+
+        // Tap switch to turn ON
+        await tester.tap(switchFinder);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<Switch>(switchFinder).value, isTrue);
+        expect(await settingsService.getWarrantyNotificationsEnabled(), isTrue);
+      },
+    );
+
+    testWidgets('shows snackbar and keeps switch off when permission is denied', (
+      tester,
+    ) async {
+      final settingsService = InMemoryAppSettingsService();
+      await settingsService.setWarrantyNotificationsEnabled(false);
+
+      final deniedNotifService = FakeWarrantyNotificationService(
+        permissionGranted: false,
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          settingsService: settingsService,
+          notificationService: deniedNotifService,
+          initialNotificationsEnabled: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchFinder = find.byKey(
+        const Key('settings_warranty_notifications_switch'),
+      );
+      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+
+      // Tap switch to turn ON, which triggers requestPermissions returning false
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      // Switch should stay disabled
+      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+      expect(await settingsService.getWarrantyNotificationsEnabled(), isFalse);
+
+      // SnackBar feedback should be shown
+      expect(
+        find.byKey(
+          const Key('settings_notifications_permission_denied_snackbar'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Notification permission is required to schedule warranty reminders. Please enable it in system settings.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders theme options and updates selection on tap', (

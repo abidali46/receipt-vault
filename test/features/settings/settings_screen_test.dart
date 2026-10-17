@@ -234,9 +234,10 @@ void main() {
       await tester.tap(switchFinder);
       await tester.pumpAndSettle();
 
-      // Switch should stay disabled
+      // Switch should stay disabled (inoperative without OS permission)
       expect(tester.widget<Switch>(switchFinder).value, isFalse);
-      expect(await settingsService.getWarrantyNotificationsEnabled(), isFalse);
+      // Saved preference in settingsService preserves the user's intent
+      expect(await settingsService.getWarrantyNotificationsEnabled(), isTrue);
 
       // SnackBar feedback should be shown
       expect(

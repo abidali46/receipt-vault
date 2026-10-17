@@ -635,17 +635,19 @@ Records significant technical and design decisions, their reasons, and important
 
 **Details:**
 
-1. **Native Device Timezone Detection:**
+1. **Native Device Timezone Detection & TimezoneInfo Identifier Extraction:**
    - `tz.initializeTimeZones()` loads the timezone database, but `tz.local` defaults to UTC unless explicitly configured with the device's location.
-   - Integrated `flutter_timezone: ^5.1.1` to query the device's IANA timezone identifier (e.g., `America/New_York`, `Asia/Tokyo`, `Europe/London`).
-   - Injected optional `Future<String> Function()? getTimeZoneName` parameter into `LocalWarrantyNotificationService` to enable hermetic testing and location switching without native platform bindings.
+   - `FlutterTimezone.getLocalTimezone()` in `flutter_timezone: ^5.1.1` returns a `TimezoneInfo` object containing `identifier` and optional `localizedName`. Calling `.toString()` on `TimezoneInfo` produces an `Equatable` property string (e.g. `TimezoneInfo(America/New_York, null)`) that `tz.getLocation` rejects with `LocationNotFoundException`.
+   - Implemented `LocalWarrantyNotificationService.extractTimeZoneIdentifier(info)`, extracting `info.identifier.trim()` directly.
+   - Injected optional `Future<TimezoneInfo> Function()? getTimeZoneInfo` alongside `getTimeZoneName` into `LocalWarrantyNotificationService` to enable hermetic regression testing covering valid, invalid, and failing timezone conversions.
    - Configured timeout with graceful fallback to `tz.getLocation('UTC')` if detection fails, timezone is unrecognized, or platform channels do not respond. In test environments (`FLUTTER_TEST`), a fast 50ms timeout ensures unmocked tests fall back to UTC immediately without causing frame pump timeouts.
    - Delivery time is kept strictly at 9:00 AM local time using `tz.TZDateTime(tz.local, targetDate.year, targetDate.month, targetDate.day, 9, 0)`.
 2. **Operational vs Saved Preference State Model:**
    - Saved user preference in `AppSettingsService` (`warranty_notifications_enabled` in `app_settings.json`, defaulting to `true`) reflects user *intent*.
    - Runtime OS permission (`areNotificationsEnabled()`) reflects actual operating system capability.
-   - `WarrantyNotificationsNotifier` evaluates operational status via `_syncOperationalStatus()`. If the user has enabled notifications in preferences but OS permission is denied or revoked, `state` evaluates to `false` (inoperative), preventing the UI from misleading the user.
-   - The user's saved preference in storage is NOT silently overwritten or destroyed when permission is denied or revoked, allowing recovery without lost intent.
+   - When a user flips the toggle to "Enable", `settingsService.setWarrantyNotificationsEnabled(true)` records their intent. If the OS subsequently denies runtime permission, operational `state` remains `false` (inoperative in the UI) and pending reminders are cancelled, but the saved user preference remains `true` in persistent storage rather than being overwritten to `false`.
+   - If the user later grants notification permissions in system settings, `_syncOperationalStatus()` automatically activates notifications on app resume without forcing the user to find and re-toggle the switch.
+   - Conversely, when the user explicitly turns the switch OFF, both operational `state` and persistent preference are updated to `false`.
    - At startup, synchronization checks `areNotificationsEnabled()` before attempting to schedule or request permissions, eliminating unsolicited permission popups on cold launch.
    - When permission is denied upon toggling the switch, a `SnackBar` displays with a "Help" action, which opens a guidance dialog detailing how to navigate to Notification permissions in Android and iOS system settings.
 3. **Notification Tap Handling & Cold-Start Navigation:**

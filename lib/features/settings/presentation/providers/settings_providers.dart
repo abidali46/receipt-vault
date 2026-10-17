@@ -87,36 +87,39 @@ class WarrantyNotificationsNotifier extends Notifier<bool> {
   }
 
   /// Updates notification setting, requesting OS permissions when enabling.
-  /// If permission is denied by the OS, leaves setting disabled and returns false.
+  /// If permission is denied by the OS, operational [state] remains false and returns false,
+  /// while preserving the user's intent in persistent storage.
   Future<bool> setNotificationsEnabled(bool enabled) async {
     final settingsService = ref.read(settingsServiceProvider);
     final notificationService = ref.read(warrantyNotificationServiceProvider);
 
     if (enabled) {
+      // Record user's intent as enabled in preferences
+      await settingsService.setWarrantyNotificationsEnabled(true);
+
       final granted = await notificationService.requestPermissions();
       if (!granted) {
+        // Notifications cannot operate without OS permission
         state = false;
-        await settingsService.setWarrantyNotificationsEnabled(false);
         await notificationService.cancelAllReminders();
         return false;
       }
-    }
 
-    state = enabled;
-    await settingsService.setWarrantyNotificationsEnabled(enabled);
-
-    if (enabled) {
+      state = true;
       final repository = ref.read(receiptsRepositoryProvider);
       final receipts = await repository.getAllReceipts();
       await notificationService.syncAllReceiptReminders(
         receipts,
         isEnabled: true,
       );
+      return true;
     } else {
+      // User explicitly disabled notifications
+      state = false;
+      await settingsService.setWarrantyNotificationsEnabled(false);
       await notificationService.cancelAllReminders();
+      return true;
     }
-
-    return true;
   }
 }
 

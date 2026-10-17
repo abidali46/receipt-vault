@@ -3,9 +3,11 @@
 // Unit tests for warranty notification scheduling, cancellation, synchronization,
 // deterministic ID generation, and notification preference persistence.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/app_settings_service.dart';
@@ -167,6 +169,107 @@ void main() {
 
         // Should complete without rethrowing
         await expectLater(service.initialize(), completes);
+        expect(tz.local.name, 'UTC');
+      },
+    );
+
+    test(
+      'extractTimeZoneIdentifier extracts raw IANA identifier rather than TimezoneInfo.toString()',
+      () {
+        final infoWithLocale = TimezoneInfo(
+          identifier: 'Europe/Paris',
+          localizedName: (
+            name: 'Central European Standard Time',
+            locale: 'fr_FR',
+          ),
+        );
+        final infoPlain = TimezoneInfo(identifier: 'America/Chicago');
+
+        // Regression assertion: TimezoneInfo.toString() contains extra class / property formatting
+        expect(infoWithLocale.toString(), contains('TimezoneInfo'));
+        expect(infoWithLocale.toString(), isNot(equals('Europe/Paris')));
+
+        // extractTimeZoneIdentifier MUST yield exactly the clean IANA identifier
+        expect(
+          LocalWarrantyNotificationService.extractTimeZoneIdentifier(
+            infoWithLocale,
+          ),
+          'Europe/Paris',
+        );
+        expect(
+          LocalWarrantyNotificationService.extractTimeZoneIdentifier(infoPlain),
+          'America/Chicago',
+        );
+
+        // Prove that tz.getLocation rejects the .toString() output but accepts extractTimeZoneIdentifier
+        expect(
+          () => tz.getLocation(infoWithLocale.toString()),
+          throwsA(isA<tz.LocationNotFoundException>()),
+        );
+        expect(
+          tz
+              .getLocation(
+                LocalWarrantyNotificationService.extractTimeZoneIdentifier(
+                  infoWithLocale,
+                ),
+              )
+              .name,
+          'Europe/Paris',
+        );
+      },
+    );
+
+    test(
+      'configures local timezone from TimezoneInfo object (regression test)',
+      () async {
+        final service = LocalWarrantyNotificationService(
+          getTimeZoneInfo: () async => TimezoneInfo(
+            identifier: 'America/Los_Angeles',
+            localizedName: (name: 'Pacific Standard Time', locale: 'en_US'),
+          ),
+        );
+
+        await service.initialize();
+
+        expect(tz.local.name, 'America/Los_Angeles');
+      },
+    );
+
+    test(
+      'handles unknown/invalid timezone in TimezoneInfo by falling back to UTC',
+      () async {
+        final service = LocalWarrantyNotificationService(
+          getTimeZoneInfo: () async =>
+              TimezoneInfo(identifier: 'Atlantis/Unknown_Ocean'),
+        );
+
+        await service.initialize();
+
+        expect(tz.local.name, 'UTC');
+      },
+    );
+
+    test(
+      'handles TimezoneInfo future failure gracefully by falling back to UTC',
+      () async {
+        final service = LocalWarrantyNotificationService(
+          getTimeZoneInfo: () async => throw Exception('Channel failed'),
+        );
+
+        await expectLater(service.initialize(), completes);
+        expect(tz.local.name, 'UTC');
+      },
+    );
+
+    test(
+      'handles TimezoneInfo timeout gracefully by falling back to UTC',
+      () async {
+        final completer = Completer<TimezoneInfo>();
+        final service = LocalWarrantyNotificationService(
+          getTimeZoneInfo: () => completer.future,
+        );
+
+        await service.initialize();
         expect(tz.local.name, 'UTC');
       },
     );

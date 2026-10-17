@@ -98,10 +98,26 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
   LocalWarrantyNotificationService({
     FlutterLocalNotificationsPlugin? plugin,
     Future<String> Function()? getTimeZoneName,
+    Future<TimezoneInfo> Function()? getTimeZoneInfo,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _getTimeZoneName =
            getTimeZoneName ??
-           (() async => (await FlutterTimezone.getLocalTimezone()).toString());
+           (getTimeZoneInfo != null
+               ? (() async {
+                   final info = await getTimeZoneInfo();
+                   return extractTimeZoneIdentifier(info);
+                 })
+               : _defaultGetTimeZoneName);
+
+  static Future<String> _defaultGetTimeZoneName() async {
+    final info = await FlutterTimezone.getLocalTimezone();
+    return extractTimeZoneIdentifier(info);
+  }
+
+  /// Extracts the standardized IANA timezone identifier from [TimezoneInfo].
+  static String extractTimeZoneIdentifier(TimezoneInfo info) {
+    return info.identifier.trim();
+  }
 
   final FlutterLocalNotificationsPlugin _plugin;
   final Future<String> Function() _getTimeZoneName;

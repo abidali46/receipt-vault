@@ -626,3 +626,36 @@ Records significant technical and design decisions, their reasons, and important
    - **App restart**: preloads settings and initializes `LocalWarrantyNotificationService` with non-blocking startup background synchronization.
 8. **Clear Distinction from In-App Alerts:**
    - Clarified distinction between the in-app `AlertsScreen` (`/alerts`)—a visual, reactive tab within the app—and local scheduled notifications delivered by the operating system when Receipt Vault is closed.
+
+---
+
+## D-026: Notification Reliability Fixes — Timezone Detection, Operational vs Saved Preference State, and Tap Payload Navigation (Phase 7.1)
+
+**Decision:** Harden scheduled warranty notifications prior to OCR development by: (1) detecting native device IANA timezone via `flutter_timezone: ^5.1.1` and configuring `tz.setLocalLocation` with UTC fallback and test-safe timeout; (2) separating persistent user preference in `app_settings.json` from runtime OS operational permission status, preventing false operational claims when permissions are denied while preserving user intent; (3) implementing foreground, background, and cold-start tap navigation to `/receipts/:id` with resilient handling for malformed or deleted receipt IDs; and (4) ensuring form saving spinner resilience.
+
+**Details:**
+
+1. **Native Device Timezone Detection:**
+   - `tz.initializeTimeZones()` loads the timezone database, but `tz.local` defaults to UTC unless explicitly configured with the device's location.
+   - Integrated `flutter_timezone: ^5.1.1` to query the device's IANA timezone identifier (e.g., `America/New_York`, `Asia/Tokyo`, `Europe/London`).
+   - Injected optional `Future<String> Function()? getTimeZoneName` parameter into `LocalWarrantyNotificationService` to enable hermetic testing and location switching without native platform bindings.
+   - Configured timeout with graceful fallback to `tz.getLocation('UTC')` if detection fails, timezone is unrecognized, or platform channels do not respond. In test environments (`FLUTTER_TEST`), a fast 50ms timeout ensures unmocked tests fall back to UTC immediately without causing frame pump timeouts.
+   - Delivery time is kept strictly at 9:00 AM local time using `tz.TZDateTime(tz.local, targetDate.year, targetDate.month, targetDate.day, 9, 0)`.
+2. **Operational vs Saved Preference State Model:**
+   - Saved user preference in `AppSettingsService` (`warranty_notifications_enabled` in `app_settings.json`, defaulting to `true`) reflects user *intent*.
+   - Runtime OS permission (`areNotificationsEnabled()`) reflects actual operating system capability.
+   - `WarrantyNotificationsNotifier` evaluates operational status via `_syncOperationalStatus()`. If the user has enabled notifications in preferences but OS permission is denied or revoked, `state` evaluates to `false` (inoperative), preventing the UI from misleading the user.
+   - The user's saved preference in storage is NOT silently overwritten or destroyed when permission is denied or revoked, allowing recovery without lost intent.
+   - At startup, synchronization checks `areNotificationsEnabled()` before attempting to schedule or request permissions, eliminating unsolicited permission popups on cold launch.
+   - When permission is denied upon toggling the switch, a `SnackBar` displays with a "Help" action, which opens a guidance dialog detailing how to navigate to Notification permissions in Android and iOS system settings.
+3. **Notification Tap Handling & Cold-Start Navigation:**
+   - `WarrantyNotificationService` exposes `Stream<String> get onNotificationTap` and `Future<String?> getAppLaunchPayload()`.
+   - On tap while the app is running (foreground or background), `LocalWarrantyNotificationService` pushes the payload string to the stream.
+   - On cold-start launch from a terminated state, `getAppLaunchPayload()` queries `_plugin.getNotificationAppLaunchDetails()`.
+   - In `main.dart`, `ReceiptVaultAppState` listens to `onNotificationTap` and checks `getAppLaunchPayload()` in a post-frame callback.
+   - Payloads are formatted as `/receipts/:id` and parsed safely via `LocalWarrantyNotificationService.parseReceiptIdFromPayload(payload)`.
+   - If a receipt exists, the app router navigates immediately to `/receipts/:id`.
+   - If a receipt was deleted or ID is non-existent, `ReceiptDetailScreen` renders its built-in "Receipt Not Found" view with a "Back to Receipts" button; no crash occurs.
+   - Malformed payloads (e.g. `/receipts/invalid`) return `null` and are discarded without interrupting the user.
+4. **Form Saving State Resilience:**
+   - Fixed `AddReceiptScreen` save handlers to wrap `_isSaving = false` and `_isSaved = true` in `setState()`, preventing runaway progress spinner animations during widget tests or failed pops.

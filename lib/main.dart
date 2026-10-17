@@ -2,6 +2,8 @@
 //
 // Entry point for Receipt Vault.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receipt_vault/app/router/app_router.dart';
@@ -52,12 +54,45 @@ class ReceiptVaultApp extends ConsumerStatefulWidget {
 }
 
 class _ReceiptVaultAppState extends ConsumerState<ReceiptVaultApp> {
+  StreamSubscription<String>? _notificationTapSubscription;
+
   @override
   void initState() {
     super.initState();
+    _subscribeToNotificationTaps();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleColdStartNotification();
       _syncNotificationsOnStartup();
     });
+  }
+
+  void _subscribeToNotificationTaps() {
+    final notificationService = ref.read(warrantyNotificationServiceProvider);
+    _notificationTapSubscription = notificationService.onNotificationTap.listen(
+      (payload) {
+        _navigateToReceipt(payload);
+      },
+    );
+  }
+
+  Future<void> _handleColdStartNotification() async {
+    try {
+      final notificationService = ref.read(warrantyNotificationServiceProvider);
+      final payload = await notificationService.getAppLaunchPayload();
+      if (payload != null && mounted) {
+        _navigateToReceipt(payload);
+      }
+    } catch (e) {
+      debugPrint('Failed to handle cold start notification payload: $e');
+    }
+  }
+
+  void _navigateToReceipt(String payload) {
+    final receiptId =
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(payload);
+    if (receiptId != null) {
+      appRouter.push(AppRoutes.receiptDetailPath(receiptId));
+    }
   }
 
   Future<void> _syncNotificationsOnStartup() async {
@@ -67,6 +102,12 @@ class _ReceiptVaultAppState extends ConsumerState<ReceiptVaultApp> {
         final notificationService = ref.read(
           warrantyNotificationServiceProvider,
         );
+        final hasPermission = await notificationService
+            .areNotificationsEnabled();
+        if (!hasPermission) {
+          // Do not repeatedly prompt at startup or schedule when permission is denied
+          return;
+        }
         final repository = ref.read(receiptsRepositoryProvider);
         final receipts = await repository.getAllReceipts();
         await notificationService.syncAllReceiptReminders(
@@ -77,6 +118,12 @@ class _ReceiptVaultAppState extends ConsumerState<ReceiptVaultApp> {
     } catch (e) {
       debugPrint('Startup warranty notification synchronization failed: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _notificationTapSubscription?.cancel();
+    super.dispose();
   }
 
   @override

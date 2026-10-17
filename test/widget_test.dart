@@ -9,21 +9,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receipt_vault/app/router/app_router.dart';
+import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/database_provider.dart';
 import 'package:receipt_vault/main.dart';
+
+Widget _buildTestApp({
+  required AppDatabase db,
+  WarrantyNotificationService? notifService,
+}) {
+  return ProviderScope(
+    overrides: [
+      databaseProvider.overrideWithValue(db),
+      warrantyNotificationServiceProvider.overrideWithValue(
+        notifService ?? FakeWarrantyNotificationService(),
+      ),
+    ],
+    child: const ReceiptVaultApp(),
+  );
+}
 
 void main() {
   testWidgets('App renders bottom navigation bar', (WidgetTester tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(() => db.close());
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
-        child: const ReceiptVaultApp(),
-      ),
-    );
+    await tester.pumpWidget(_buildTestApp(db: db));
     // Allow GoRouter to settle.
     await tester.pumpAndSettle();
 
@@ -50,12 +61,7 @@ void main() {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(() => db.close());
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Tap center Add button
@@ -88,12 +94,7 @@ void main() {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(() => db.close());
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Tap center Add button
@@ -150,12 +151,7 @@ void main() {
 
       appRouter.go(AppRoutes.receipts);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Receipts screen displays MacBook Air
@@ -234,12 +230,7 @@ void main() {
 
       appRouter.go(AppRoutes.receipts);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Card is in list
@@ -317,12 +308,7 @@ void main() {
 
       appRouter.go(AppRoutes.receipts);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // On Receipts screen initially
@@ -411,12 +397,7 @@ void main() {
 
       appRouter.go(AppRoutes.receipts);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Start on Receipts tab
@@ -464,12 +445,7 @@ void main() {
 
       appRouter.go(AppRoutes.receipts);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const ReceiptVaultApp(),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(db: db));
       await tester.pumpAndSettle();
 
       // Tap Settings in bottom navigation bar
@@ -506,6 +482,155 @@ void main() {
       expect(appWidgetLight.themeMode, ThemeMode.light);
 
       // Unmount ProviderScope and clear pending queries
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    },
+  );
+
+  testWidgets(
+    'Notification tap while app is running navigates to ReceiptDetailScreen',
+    (WidgetTester tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(() => db.close());
+
+      final notifService = FakeWarrantyNotificationService();
+
+      await db
+          .into(db.receipts)
+          .insert(
+            ReceiptsCompanion.insert(
+              productName: 'Sony WH-1000XM5',
+              purchaseDate: DateTime(2026, 1, 1),
+              totalAmount: 399.99,
+              warrantyDurationDays: const drift.Value(365),
+              createdAt: drift.Value(DateTime.now()),
+            ),
+          );
+
+      appRouter.go(AppRoutes.receipts);
+
+      await tester.pumpWidget(
+        _buildTestApp(db: db, notifService: notifService),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('My Receipts'), findsOneWidget);
+
+      // Simulate notification tap
+      notifService.simulateNotificationTap('/receipts/1');
+      await tester.pumpAndSettle();
+
+      // Should have navigated to ReceiptDetailScreen
+      expect(find.text('Receipt Details'), findsOneWidget);
+      expect(find.text('Sony WH-1000XM5'), findsOneWidget);
+
+      // Back navigation returns to Receipts
+      await tester.tap(find.byKey(const Key('receipt_detail_back_button')));
+      await tester.pumpAndSettle();
+      expect(find.text('My Receipts'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    },
+  );
+
+  testWidgets(
+    'Cold start notification tap navigates to ReceiptDetailScreen on startup',
+    (WidgetTester tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(() => db.close());
+
+      final notifService = FakeWarrantyNotificationService();
+      notifService.setLaunchPayload('/receipts/1');
+
+      await db
+          .into(db.receipts)
+          .insert(
+            ReceiptsCompanion.insert(
+              productName: 'iPad Pro',
+              purchaseDate: DateTime(2026, 1, 1),
+              totalAmount: 999.00,
+              warrantyDurationDays: const drift.Value(365),
+              createdAt: drift.Value(DateTime.now()),
+            ),
+          );
+
+      appRouter.go(AppRoutes.receipts);
+
+      await tester.pumpWidget(
+        _buildTestApp(db: db, notifService: notifService),
+      );
+      await tester.pumpAndSettle();
+
+      // Cold start should automatically navigate to the receipt detail screen
+      expect(find.text('Receipt Details'), findsOneWidget);
+      expect(find.text('iPad Pro'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    },
+  );
+
+  testWidgets(
+    'Notification tap with non-existent or deleted receipt ID displays Receipt Not Found',
+    (WidgetTester tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(() => db.close());
+
+      final notifService = FakeWarrantyNotificationService();
+
+      appRouter.go(AppRoutes.receipts);
+
+      await tester.pumpWidget(
+        _buildTestApp(db: db, notifService: notifService),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap notification for non-existent receipt
+      notifService.simulateNotificationTap('/receipts/9999');
+      await tester.pumpAndSettle();
+
+      // ReceiptDetailScreen renders its built-in not found state
+      expect(find.text('Receipt Not Found'), findsOneWidget);
+      expect(
+        find.text('This receipt does not exist or has been removed.'),
+        findsOneWidget,
+      );
+
+      // Back to Receipts button works
+      await tester.tap(
+        find.byKey(const Key('receipt_detail_not_found_back_button')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('My Receipts'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    },
+  );
+
+  testWidgets(
+    'Notification tap with malformed payload is ignored safely without crashing',
+    (WidgetTester tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(() => db.close());
+
+      final notifService = FakeWarrantyNotificationService();
+
+      appRouter.go(AppRoutes.receipts);
+
+      await tester.pumpWidget(
+        _buildTestApp(db: db, notifService: notifService),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap notification with malformed payload
+      notifService.simulateNotificationTap('/receipts/not_a_number');
+      await tester.pumpAndSettle();
+
+      // Remains on current screen without error
+      expect(find.text('My Receipts'), findsOneWidget);
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));
     },

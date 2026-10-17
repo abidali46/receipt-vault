@@ -1,6 +1,6 @@
 # Receipt Vault – Current Status
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-17_
 
 ## What Has Been Built (Verified Working)
 
@@ -505,20 +505,38 @@ A complete, offline-first scheduled local notifications service integrated with 
   - Battery optimization: uses `AndroidScheduleMode.inexactAllowWhileIdle` to conserve battery and avoid Google Play exact-alarm policy restrictions.
   - iOS configuration: `UNUserNotificationCenter.current().delegate` assigned in `AppDelegate.swift`.
 
+### 10. Phase 7.1: Scheduled Warranty Notification Reliability Fixes
+
+- **Accurate Device Timezone Detection**:
+  - Integrated `flutter_timezone: ^5.1.1` to detect device IANA timezone (e.g., `America/New_York`, `Asia/Tokyo`) and configure `tz.setLocalLocation()`.
+  - Ensures 9:00 AM warranty reminder times evaluate in the user's actual local timezone rather than default UTC.
+  - Graceful fallback with timeout protecting against missing or unhandled platform channels, defaulting safely to UTC.
+- **Consistent Notification Preference & Permission States**:
+  - Separated persistent user preference in `AppSettingsService` (`app_settings.json`) from runtime OS operational permission status.
+  - Prevents representing notifications as operational in the UI when OS permission is revoked or denied.
+  - Startup synchronization avoids repeated permission prompts when permission is absent.
+  - Clear user recovery path: when permission is denied, a `Help` action and guidance dialog display explicit step-by-step instructions for Android and iOS system settings.
+- **Notification Tap Stream & Cold-Start Navigation**:
+  - `WarrantyNotificationService` provides `Stream<String> onNotificationTap` for foreground/background taps and `Future<String?> getAppLaunchPayload()` for cold-start launches.
+  - Robust payload parsing supporting `/receipts/:id` and raw ID strings via `LocalWarrantyNotificationService.parseReceiptIdFromPayload(payload)`.
+  - Safe error handling: non-existent or deleted receipt IDs render the built-in "Receipt Not Found" screen; malformed payloads are safely ignored without app crashes.
+- **Form Saving Spinner Resilience**:
+  - Wrapped `_isSaving` and `_isSaved` state updates in `setState()` in both insert and edit paths in `AddReceiptScreen`, ensuring progress spinners reset cleanly even when views do not unmount immediately.
+
 **Last verified check results:**
 - `dart format` → All source & test files formatted cleanly.
 - `flutter analyze` → **No issues found.**
-- `flutter test` → **All 168/168 tests passing** across all unit, repository, service, screen, and integration test suites.
+- `flutter test` → **All 181/181 tests passing** across all unit, repository, service, screen, and integration test suites.
 
 ---
 
 ## What Does NOT Exist Yet
 
 - **All 5 Shell Tabs Complete** — All 5 bottom navigation tabs (`Receipts`, `Warranties`, `Add`, `Alerts`, `Settings`) are now fully implemented with real UI and persistence.
-- **Scheduled Local Notifications Complete (Phase 7)** — Scheduled local notifications (30-day and 7-day reminders) are fully implemented and synchronized. Cloud-based remote push notifications (APNs / Firebase Cloud Messaging) are intentionally omitted to preserve privacy and offline-first operation.
+- **Scheduled Local Notifications Complete (Phase 7 & 7.1)** — Scheduled local notifications (30-day and 7-day reminders) are fully implemented, time-zone accurate, tap-navigable, and synchronized. Cloud-based remote push notifications (APNs / Firebase Cloud Messaging) are intentionally omitted to preserve privacy and offline-first operation.
 - **No full binary/photo backup archive** — The CSV export feature exports receipt metadata for spreadsheets; full binary archive backup including photos (.zip) is not yet implemented.
 - **No multi-currency settings** — Currently amounts are entered and displayed in USD ($); user-selected currency setting is planned for v1.1+.
-- **No OCR** — Automated text/receipt parsing is not yet implemented (Phase 10).
+- **No OCR** — Automated text/receipt parsing is not yet implemented (Phase 8 / 10).
 - **No Inter font** — System font is used.
 - **No cloud image storage/sync** — Local persistent storage only (as designed for privacy and offline speed).
 - **No statistics/analytics** — `lib/features/statistics/` directory is empty (Phase 9).
@@ -541,6 +559,7 @@ A complete, offline-first scheduled local notifications service integrated with 
 | `image_picker` | ^1.2.4 | ✅ Yes (Camera capture & gallery photo selection) |
 | `flutter_local_notifications` | ^22.3.2 | ✅ Yes (Scheduled local warranty expiration reminders) |
 | `timezone` | ^0.11.2 | ✅ Yes (Time-zone-aware notification delivery calculations) |
+| `flutter_timezone` | ^5.1.1 | ✅ Yes (Device IANA timezone detection for Android and iOS) |
 | `riverpod_annotation` | ^4.0.7 | ❌ Available for future providers |
 
 ### Dev

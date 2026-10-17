@@ -2,12 +2,14 @@
 //
 // Scheduled local notifications service for Receipt Vault.
 // Reminds users 30 days and 7 days prior to product warranty expiration
-// using flutter_local_notifications and timezone.
+// using flutter_local_notifications, timezone, and flutter_timezone.
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/features/receipts/domain/services/warranty_calculator.dart';
 import 'package:receipt_vault/shared/enums/warranty_status.dart';
@@ -50,15 +52,21 @@ class ScheduledWarrantyNotification {
 
 /// Abstract contract for warranty notification scheduling and lifecycle.
 abstract class WarrantyNotificationService {
-  /// Initializes the local notification plugin, channels, and timezones.
+  /// Initializes the local notification plugin, channels, and device timezone.
   Future<void> initialize();
 
   /// Requests notification permissions from the operating system (Android 13+, iOS).
   /// Returns `true` if permissions were granted or already granted.
   Future<bool> requestPermissions();
 
-  /// Checks if notifications are permitted by system settings.
+  /// Checks if notifications are permitted by operating system settings.
   Future<bool> areNotificationsEnabled();
+
+  /// Stream emitting notification payloads when tapped while the application is running.
+  Stream<String> get onNotificationTap;
+
+  /// Retrieves payload if the app was launched by tapping a notification (cold start).
+  Future<String?> getAppLaunchPayload();
 
   /// Schedules future 30-day and 7-day reminders for a receipt if eligible.
   /// Returns the list of scheduled reminders.
@@ -87,10 +95,18 @@ abstract class WarrantyNotificationService {
 
 /// Production implementation of [WarrantyNotificationService] backed by [FlutterLocalNotificationsPlugin].
 class LocalWarrantyNotificationService implements WarrantyNotificationService {
-  LocalWarrantyNotificationService({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  LocalWarrantyNotificationService({
+    FlutterLocalNotificationsPlugin? plugin,
+    Future<String> Function()? getTimeZoneName,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _getTimeZoneName =
+           getTimeZoneName ??
+           (() async => (await FlutterTimezone.getLocalTimezone()).toString());
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final Future<String> Function() _getTimeZoneName;
+  final StreamController<String> _tapStreamController =
+      StreamController<String>.broadcast();
   bool _isInitialized = false;
 
   /// Android notification channel ID for warranty expiration alerts.
@@ -135,14 +151,60 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
     return '$month ${date.day}, ${date.year}';
   }
 
+  /// Safely extracts the receipt ID from a notification payload.
+  /// Handles formats like '/receipts/123', '123', or full URIs.
+  /// Returns null if the payload is malformed, invalid, or null.
+  static int? parseReceiptIdFromPayload(String? payload) {
+    if (payload == null) return null;
+    final trimmed = payload.trim();
+    if (trimmed.isEmpty) return null;
+
+    if (trimmed.startsWith('/receipts/')) {
+      final idPart = trimmed.substring('/receipts/'.length);
+      return int.tryParse(idPart);
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.pathSegments.isNotEmpty) {
+      if (uri.pathSegments.first == 'receipts' && uri.pathSegments.length > 1) {
+        return int.tryParse(uri.pathSegments[1]);
+      }
+    }
+
+    return int.tryParse(trimmed);
+  }
+
+  @override
+  Stream<String> get onNotificationTap => _tapStreamController.stream;
+
   @override
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
       tz.initializeTimeZones();
+      String timeZoneName;
+      try {
+        final timeoutDuration =
+            !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')
+            ? const Duration(milliseconds: 50)
+            : const Duration(seconds: 2);
+        timeZoneName = await _getTimeZoneName().timeout(timeoutDuration);
+      } catch (_) {
+        timeZoneName = 'UTC';
+      }
+
+      try {
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+      } catch (_) {
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      }
     } catch (e) {
       debugPrint('Warning: Timezone initialization error: $e');
+      try {
+        // Fallback to UTC if device timezone cannot be determined
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      } catch (_) {}
     }
 
     try {
@@ -163,7 +225,10 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
       await _plugin.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (response) {
-          debugPrint('Notification tapped with payload: ${response.payload}');
+          final payload = response.payload;
+          if (payload != null && payload.isNotEmpty) {
+            _tapStreamController.add(payload);
+          }
         },
       );
 
@@ -185,6 +250,21 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
       _isInitialized = true;
     } catch (e) {
       debugPrint('Warning: Failed to initialize local notifications: $e');
+    }
+  }
+
+  @override
+  Future<String?> getAppLaunchPayload() async {
+    try {
+      await initialize();
+      final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp ?? false) {
+        return launchDetails?.notificationResponse?.payload;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error retrieving app launch payload: $e');
+      return null;
     }
   }
 
@@ -227,17 +307,27 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
   @override
   Future<bool> areNotificationsEnabled() async {
     try {
-      final androidPlugin = _plugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
-      if (androidPlugin != null) {
-        final enabled = await androidPlugin.areNotificationsEnabled();
-        return enabled ?? true;
+      await initialize();
+
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final androidPlugin = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        return await androidPlugin?.areNotificationsEnabled() ?? false;
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final iosPlugin = _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
+        final options = await iosPlugin?.checkPermissions();
+        return (options?.isEnabled ?? false) ||
+            (options?.isAlertEnabled ?? false);
       }
+
       return true;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
@@ -267,7 +357,7 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
     final remindersToSchedule = <int>[30, 7];
 
     for (final daysBefore in remindersToSchedule) {
-      // Calculate target date at 9:00 AM
+      // Calculate target date
       final targetDate = DateTime(
         expiryDate.year,
         expiryDate.month,
@@ -303,7 +393,14 @@ class LocalWarrantyNotificationService implements WarrantyNotificationService {
         try {
           await initialize();
 
-          final tzScheduledDate = tz.TZDateTime.from(targetDate, tz.local);
+          final tzScheduledDate = tz.TZDateTime(
+            tz.local,
+            targetDate.year,
+            targetDate.month,
+            targetDate.day,
+            reminderHour,
+            reminderMinute,
+          );
 
           const androidDetails = AndroidNotificationDetails(
             channelId,
@@ -424,9 +521,27 @@ class FakeWarrantyNotificationService implements WarrantyNotificationService {
   bool isPermissionGranted;
   bool notificationsEnabled;
   bool isInitialized = false;
+  String? fakeLaunchPayload;
 
+  final StreamController<String> _tapStreamController =
+      StreamController<String>.broadcast();
   final Map<int, ScheduledWarrantyNotification> scheduledNotifications = {};
   final List<String> callLog = [];
+
+  @override
+  Stream<String> get onNotificationTap => _tapStreamController.stream;
+
+  @override
+  Future<String?> getAppLaunchPayload() async => fakeLaunchPayload;
+
+  void simulateNotificationTap(String payload) {
+    callLog.add('notificationTap:$payload');
+    _tapStreamController.add(payload);
+  }
+
+  void setLaunchPayload(String? payload) {
+    fakeLaunchPayload = payload;
+  }
 
   @override
   Future<void> initialize() async {

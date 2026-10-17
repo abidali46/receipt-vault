@@ -468,8 +468,10 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
 
         if (!mounted) return;
 
-        _isSaved = true;
-        _isSaving = false;
+        setState(() {
+          _isSaved = true;
+          _isSaving = false;
+        });
 
         widget.onSubmit?.call(formData);
 
@@ -522,8 +524,10 @@ class _AddReceiptScreenState extends ConsumerState<AddReceiptScreen> {
 
       if (!mounted) return;
 
-      _isSaved = true;
-      _isSaving = false;
+      setState(() {
+        _isSaved = true;
+        _isSaving = false;
+      });
 
       widget.onSubmit?.call(formData);
 

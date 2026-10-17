@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:receipt_vault/core/services/warranty_notification_service.dart';
 import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/app_settings_service.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 Receipt _createReceipt({
   required int id,
@@ -64,6 +65,113 @@ void main() {
     );
   });
 
+  group('Payload Parsing and Validation', () {
+    test('parses valid route paths correctly', () {
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          '/receipts/123',
+        ),
+        123,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          '/receipts/1',
+        ),
+        1,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          '  /receipts/999  ',
+        ),
+        999,
+      );
+    });
+
+    test('parses plain numeric ID strings correctly', () {
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload('42'),
+        42,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload('  789  '),
+        789,
+      );
+    });
+
+    test('returns null for malformed, non-numeric, or unrelated payloads', () {
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(null),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(''),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload('   '),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          '/receipts/abc',
+        ),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          '/receipts/',
+        ),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload('/settings'),
+        isNull,
+      );
+      expect(
+        LocalWarrantyNotificationService.parseReceiptIdFromPayload(
+          'invalid_data',
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('LocalWarrantyNotificationService Timezone Configuration', () {
+    test('configures local timezone from device timezone getter', () async {
+      final service = LocalWarrantyNotificationService(
+        getTimeZoneName: () async => 'America/New_York',
+      );
+
+      await service.initialize();
+
+      expect(tz.local.name, 'America/New_York');
+    });
+
+    test('switches local timezone cleanly to another location', () async {
+      final service = LocalWarrantyNotificationService(
+        getTimeZoneName: () async => 'Asia/Tokyo',
+      );
+
+      await service.initialize();
+
+      expect(tz.local.name, 'Asia/Tokyo');
+    });
+
+    test(
+      'handles timezone detection errors gracefully by falling back to UTC',
+      () async {
+        final service = LocalWarrantyNotificationService(
+          getTimeZoneName: () async =>
+              throw Exception('Failed to get timezone'),
+        );
+
+        // Should complete without rethrowing
+        await expectLater(service.initialize(), completes);
+        expect(tz.local.name, 'UTC');
+      },
+    );
+  });
+
   group('FakeWarrantyNotificationService Scheduling Logic', () {
     late FakeWarrantyNotificationService service;
     final fixedNow = DateTime(2026, 6, 1, 10, 0);
@@ -94,12 +202,16 @@ void main() {
         expect(scheduled[0].title, contains('Sony Headphones'));
         expect(scheduled[0].body, contains('30 days'));
         expect(scheduled[0].payload, '/receipts/10');
+        expect(scheduled[0].scheduledDate.hour, 9);
+        expect(scheduled[0].scheduledDate.minute, 0);
 
         expect(scheduled[1].daysBeforeExpiry, 7);
         expect(scheduled[1].id, 102);
         expect(scheduled[1].title, contains('Sony Headphones'));
         expect(scheduled[1].body, contains('7 days'));
         expect(scheduled[1].payload, '/receipts/10');
+        expect(scheduled[1].scheduledDate.hour, 9);
+        expect(scheduled[1].scheduledDate.minute, 0);
       },
     );
 
@@ -287,6 +399,26 @@ void main() {
           permissionGranted: false,
         );
         expect(await deniedService.requestPermissions(), isFalse);
+      },
+    );
+
+    test(
+      'tap stream and cold-start launch payload operate as expected',
+      () async {
+        final notifService = FakeWarrantyNotificationService();
+
+        expect(await notifService.getAppLaunchPayload(), isNull);
+        notifService.setLaunchPayload('/receipts/55');
+        expect(await notifService.getAppLaunchPayload(), '/receipts/55');
+
+        final emitted = <String>[];
+        final sub = notifService.onNotificationTap.listen(emitted.add);
+
+        notifService.simulateNotificationTap('/receipts/99');
+        await Future<void>.delayed(Duration.zero);
+
+        expect(emitted, ['/receipts/99']);
+        await sub.cancel();
       },
     );
   });

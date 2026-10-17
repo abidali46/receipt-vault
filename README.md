@@ -63,8 +63,11 @@ Receipt Vault gives you digital peace of mind by centralizing your receipts and 
 - **Privacy Disclosure**: Transparent privacy notice confirming all data and images remain strictly on the device.
 
 ### 7. Scheduled Local Warranty Notifications
-- **Background Reminders**: Scheduled reminders sent 30 days and 7 days prior to warranty expiration at 9:00 AM local time, even when the app is closed.
+- **Background Reminders**: Scheduled reminders sent 30 days and 7 days prior to warranty expiration at 9:00 AM in the device's local timezone, even when the app is closed.
+- **Accurate Timezone Detection**: Uses `flutter_timezone` to configure native device IANA timezone locations for Android and iOS with graceful UTC fallback.
+- **Direct Tap Navigation**: Tapping a scheduled warranty reminder opens the corresponding receipt details screen immediately, supporting active app, background, and cold-start boots.
 - **Full Lifecycle Synchronization**: Automatically schedules, updates, or cancels reminders when receipts are added, edited, or deleted.
+- **Permission Resilience**: Transparent OS permission synchronization preserving user preferences, with guidance dialogs to assist recovery when permissions are denied.
 - **Battery-Friendly Scheduling**: Uses inexact alarms (`AndroidScheduleMode.inexactAllowWhileIdle`) on Android to conserve battery while respecting Google Play policies.
 
 ---
@@ -75,7 +78,7 @@ Receipt Vault gives you digital peace of mind by centralizing your receipts and 
 - **State Management**: [Riverpod](https://riverpod.dev) (`flutter_riverpod`, `riverpod_annotation`, `riverpod_generator`)
 - **Routing**: [GoRouter](https://pub.dev/packages/go_router) with `StatefulShellRoute` for independent tab stacks
 - **Database & Persistence**: [Drift](https://drift.simonbinder.eu/) (type-safe SQLite abstraction) with `sqlite3_flutter_libs`
-- **Local Notifications**: [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) with [timezone](https://pub.dev/packages/timezone) for local time-zone-aware scheduling
+- **Local Notifications**: [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications), [timezone](https://pub.dev/packages/timezone), and [flutter_timezone](https://pub.dev/packages/flutter_timezone) for device time-zone-aware scheduling
 - **Media Storage**: Local file system management via `path_provider` and private persistent storage
 - **Design System**: Material 3 with tailored light and dark color schemes (`AppTheme`, `AppColors`, `AppTypography`, `AppShapes`)
 

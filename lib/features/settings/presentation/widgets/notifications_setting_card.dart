@@ -89,14 +89,18 @@ class NotificationsSettingCard extends ConsumerWidget {
 
               if (newValue && !success) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    key: Key(
+                  SnackBar(
+                    key: const Key(
                       'settings_notifications_permission_denied_snackbar',
                     ),
-                    content: Text(
+                    content: const Text(
                       'Notification permission is required to schedule warranty reminders. Please enable it in system settings.',
                     ),
-                    duration: Duration(seconds: 4),
+                    action: SnackBarAction(
+                      label: 'Help',
+                      onPressed: () => _showPermissionGuidanceDialog(context),
+                    ),
+                    duration: const Duration(seconds: 5),
                   ),
                 );
               }
@@ -104,6 +108,29 @@ class NotificationsSettingCard extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showPermissionGuidanceDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Text(
+            'Notification permissions are currently disabled for Receipt Vault in your system settings.\n\n'
+            'To receive 30-day and 7-day warranty expiration reminders:\n'
+            '• Android: Open Settings > Apps > Receipt Vault > Notifications and turn on Allow notifications.\n'
+            '• iOS: Open Settings > Receipt Vault > Notifications and turn on Allow Notifications.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Dismiss'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

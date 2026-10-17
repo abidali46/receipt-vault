@@ -7,7 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receipt_vault/app/theme/app_theme.dart';
 import 'package:receipt_vault/core/services/warranty_notification_service.dart';
+import 'package:receipt_vault/core/storage/app_database.dart';
 import 'package:receipt_vault/core/storage/app_settings_service.dart';
+import 'package:receipt_vault/features/receipts/domain/entities/receipt_card_data.dart';
+import 'package:receipt_vault/features/receipts/domain/repositories/receipts_repository.dart';
+import 'package:receipt_vault/features/receipts/presentation/providers/receipts_providers.dart';
 import 'package:receipt_vault/features/settings/presentation/providers/settings_providers.dart';
 import 'package:receipt_vault/features/settings/presentation/settings_screen.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/about_app_card.dart';
@@ -16,9 +20,37 @@ import 'package:receipt_vault/features/settings/presentation/widgets/notificatio
 import 'package:receipt_vault/features/settings/presentation/widgets/privacy_note_card.dart';
 import 'package:receipt_vault/features/settings/presentation/widgets/theme_selection_card.dart';
 
+class _MockReceiptsRepository implements ReceiptsRepository {
+  @override
+  Future<List<Receipt>> getAllReceipts() async => [];
+
+  @override
+  Future<int> insertReceipt(ReceiptsCompanion receipt) async => 1;
+
+  @override
+  Future<bool> updateReceipt(Receipt receipt) async => true;
+
+  @override
+  Future<int> deleteReceipt(int id) async => 1;
+
+  @override
+  Future<Receipt?> getReceiptById(int id) async => null;
+
+  @override
+  Stream<List<Receipt>> watchReceipts() => const Stream.empty();
+
+  @override
+  Stream<Receipt?> watchReceiptById(int id) => const Stream.empty();
+
+  @override
+  Stream<List<ReceiptCardData>> watchReceiptCards({DateTime? now}) =>
+      const Stream.empty();
+}
+
 Widget _buildTestApp({
   AppSettingsService? settingsService,
   WarrantyNotificationService? notificationService,
+  ReceiptsRepository? receiptsRepository,
   ThemeMode initialThemeMode = ThemeMode.system,
   ThemeMode themeMode = ThemeMode.light,
   bool initialNotificationsEnabled = true,
@@ -26,6 +58,7 @@ Widget _buildTestApp({
   final service =
       settingsService ?? InMemoryAppSettingsService(initialThemeMode);
   final notifService = notificationService ?? FakeWarrantyNotificationService();
+  final repository = receiptsRepository ?? _MockReceiptsRepository();
 
   return ProviderScope(
     overrides: [
@@ -35,6 +68,7 @@ Widget _buildTestApp({
         initialNotificationsEnabled,
       ),
       warrantyNotificationServiceProvider.overrideWithValue(notifService),
+      receiptsRepositoryProvider.overrideWithValue(repository),
     ],
     child: MaterialApp(
       theme: AppTheme.light,
@@ -217,7 +251,94 @@ void main() {
         ),
         findsOneWidget,
       );
+
+      // Tap Help on SnackBar to open guidance dialog
+      expect(find.text('Help'), findsOneWidget);
+      await tester.tap(find.text('Help'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enable Notifications'), findsOneWidget);
+      expect(
+        find.textContaining('Notification permissions are currently disabled'),
+        findsOneWidget,
+      );
+
+      // Dismiss dialog
+      await tester.tap(find.text('Dismiss'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enable Notifications'), findsNothing);
     });
+
+    testWidgets(
+      're-enabling notifications after permission is granted succeeds and syncs reminders',
+      (tester) async {
+        final settingsService = InMemoryAppSettingsService();
+        await settingsService.setWarrantyNotificationsEnabled(false);
+
+        final notifService = FakeWarrantyNotificationService(
+          permissionGranted: true,
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            settingsService: settingsService,
+            notificationService: notifService,
+            initialNotificationsEnabled: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final switchFinder = find.byKey(
+          const Key('settings_warranty_notifications_switch'),
+        );
+        expect(tester.widget<Switch>(switchFinder).value, isFalse);
+
+        // Turn ON
+        await tester.tap(switchFinder);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<Switch>(switchFinder).value, isTrue);
+        expect(await settingsService.getWarrantyNotificationsEnabled(), isTrue);
+        expect(notifService.callLog, contains('requestPermissions'));
+        expect(
+          notifService.callLog.any(
+            (l) => l.startsWith('syncAllReceiptReminders'),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    testWidgets(
+      'does not represent notifications as operational when OS permission is revoked',
+      (tester) async {
+        final settingsService = InMemoryAppSettingsService();
+        // User had previously saved true
+        await settingsService.setWarrantyNotificationsEnabled(true);
+
+        // But OS permission is revoked
+        final revokedNotifService = FakeWarrantyNotificationService(
+          isPermissionGranted: false,
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            settingsService: settingsService,
+            notificationService: revokedNotifService,
+            initialNotificationsEnabled: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final switchFinder = find.byKey(
+          const Key('settings_warranty_notifications_switch'),
+        );
+        // Switch must reflect that notifications are not operational
+        expect(tester.widget<Switch>(switchFinder).value, isFalse);
+        // Saved preference in file is preserved without silent overwrite
+        expect(await settingsService.getWarrantyNotificationsEnabled(), isTrue);
+      },
+    );
 
     testWidgets('renders theme options and updates selection on tap', (
       tester,

@@ -301,6 +301,41 @@ Do not skip ahead — the database task unlocks all real feature work.
 
 ---
 
+## ✅ Phase 7 — Scheduled Local Warranty Notifications (Complete)
+
+- [x] **Scheduled Local Expiration Reminders**
+  - Added `flutter_local_notifications: ^22.3.2` and `timezone: ^0.11.2`.
+  - Defined `WarrantyNotificationService` abstract interface and production `LocalWarrantyNotificationService`.
+  - Configured deterministic 32-bit notification IDs (`reminder30Id = (receiptId * 10) + 1`, `reminder7Id = (receiptId * 10) + 2`).
+  - Implemented 30-day and 7-day expiration reminders scheduled for 9:00 AM local time using inexact battery-friendly alarms (`AndroidScheduleMode.inexactAllowWhileIdle`).
+  - Added Settings UI notification toggle with system permission handling and persistent storage in `app_settings.json`.
+  - Complete lifecycle synchronization across receipt additions, edits, deletions, and startup.
+
+---
+
+## ✅ Phase 7.1 — Notification Reliability Fixes (Complete)
+
+- [x] **Correct Device Timezone Handling**
+  - Integrated `flutter_timezone: ^5.1.1` to detect device IANA timezone on Android and iOS.
+  - Set `tz.local` location properly with resilient fallback to UTC on failure or timeout.
+  - Kept reminder delivery at 9:00 AM in the user's actual device timezone without altering centralized `WarrantyCalculator` logic.
+- [x] **Consistent Notification Preference and Permission States**
+  - Separated persistent user preference (`AppSettingsService`) from active runtime OS operational permission status.
+  - Fixed UI state to avoid representing notifications as operational when OS permission is denied.
+  - Added user guidance dialog with explicit Android and iOS system settings navigation instructions when permissions are denied.
+  - Guarded startup synchronization against unsolicited repeated permission popups.
+- [x] **Handle Notification Taps & Cold-Start Navigation**
+  - Exposed `onNotificationTap` broadcast stream and `getAppLaunchPayload()` on `WarrantyNotificationService`.
+  - Subscribed in `ReceiptVaultAppState` in `main.dart` with post-frame cold-start launch payload check.
+  - Implemented safe payload parsing (`/receipts/:id` and raw numeric IDs), opening receipt details directly.
+  - Safely handled non-existent/deleted receipt IDs using the built-in "Receipt Not Found" view, and ignored malformed payloads without crashing.
+- [x] **Comprehensive Testing & Analyzer Verification**
+  - Added unit and widget tests covering timezone configuration, UTC fallback, notification tap stream, cold-start launch payload, permission denial/recovery, revoked permissions, and malformed payload handling.
+  - Fixed form saving state resilience in `AddReceiptScreen` (`_isSaving = false` inside `setState`).
+  - Total passing tests increased to **181/181 passing**, with `flutter analyze` reporting **0 issues**.
+
+---
+
 ## 🔲 Phase 9 — Statistics (Low Priority)
 
 - `lib/features/statistics/` — Empty directory, no mockup provided.

@@ -10,9 +10,9 @@
 | State Management | flutter_riverpod ^3.4.3 (ProviderScope + databaseProvider + receiptsStreamProvider + receiptImageServiceProvider + settingsServiceProvider + themeModeProvider + warrantyNotificationServiceProvider) |
 | Local Database   | Drift ^2.35.2 (SQLite, NativeDatabase isolate)                                                                                                                  |
 | Media / Storage  | image_picker ^1.2.4 (Camera capture & gallery selection), path_provider ^2.1.6                                                                                  |
-| Notifications    | flutter_local_notifications ^22.3.2, timezone ^0.11.2                                                                                                           |
+| Notifications    | flutter_local_notifications ^22.3.2, timezone ^0.11.2, flutter_timezone ^5.1.1                                                                 |
 | Code Generation  | build_runner ^2.15.1, drift_dev ^2.35.1                                                                                                                         |
-| Testing          | flutter_test (168 unit, repository, service, screen, and widget tests)                                                                                          |
+| Testing          | flutter_test (181 unit, repository, service, screen, and widget tests)                                                                                          |
 
 ## Folder Structure
 

@@ -60,14 +60,30 @@ class WarrantyNotificationsNotifier extends Notifier<bool> {
   bool build() {
     final initial = ref.watch(initialWarrantyNotificationsEnabledProvider);
     final service = ref.watch(settingsServiceProvider);
+    final notificationService = ref.watch(warrantyNotificationServiceProvider);
 
-    service.getWarrantyNotificationsEnabled().then((persistedEnabled) {
-      if (state != persistedEnabled) {
-        state = persistedEnabled;
-      }
-    });
+    _syncOperationalStatus(service, notificationService);
 
     return initial;
+  }
+
+  Future<void> _syncOperationalStatus(
+    AppSettingsService service,
+    WarrantyNotificationService notificationService,
+  ) async {
+    final preference = await service.getWarrantyNotificationsEnabled();
+    if (!preference) {
+      if (state != false) {
+        state = false;
+      }
+      return;
+    }
+
+    final hasPermission = await notificationService.areNotificationsEnabled();
+    final operational = preference && hasPermission;
+    if (state != operational) {
+      state = operational;
+    }
   }
 
   /// Updates notification setting, requesting OS permissions when enabling.
